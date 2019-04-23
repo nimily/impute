@@ -1,8 +1,9 @@
 import numpy as np
+import numpy.linalg as npl
 import numpy.testing as npt
 
 from impute.measurement import EntryMeasurement
-from impute.sample_set import SampleSet
+from impute.sample_set import SampleSet, RowSampleSet
 
 
 def test_sample_set_value():
@@ -77,3 +78,39 @@ def test_sample_set_rss_grad():
         [0,   0, -16,   0,  -81],
     ])
     npt.assert_array_almost_equal(actual, expect, 4)
+
+
+def test_sample_set_op_norm():
+    shape = 5, 5
+
+    rows = [i for i in range(shape[0])] * 2
+    cols = [j // 2 for j in range(2 * shape[0])]
+    vals = [i ** 0.5 for i in range(shape[0] * 2)]
+
+    xs = [EntryMeasurement(shape, r, c, v) for r, c, v in zip(rows, cols, vals)]
+    ys = [i ** 1.5 for i in range(2 * shape[0])]
+
+    ss = SampleSet(shape)
+    ss.add_all_obs(xs, ys)
+
+    actual = ss.op_norm()
+    expect = max(vals)
+    npt.assert_almost_equal(actual, expect)
+
+
+def test_row_sample_set_op_norm():
+    shape = 5, 5
+
+    rows = [i for i in range(shape[0])] * 2
+    cols = [j // 2 for j in range(2 * shape[0])]
+    vals = [i ** 0.5 for i in range(shape[0] * 2)]
+
+    xs = [EntryMeasurement(shape, r, c, v) for r, c, v in zip(rows, cols, vals)]
+    ys = [i ** 1.5 for i in range(2 * shape[0])]
+
+    ss = RowSampleSet(shape)
+    ss.add_all_obs(xs, ys)
+
+    actual = ss.op_norm()
+    expect = max(vals)
+    npt.assert_almost_equal(actual, expect)

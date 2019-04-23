@@ -92,7 +92,7 @@ class RowMeasurement(FullMeasurement):
         v = self.row_value
 
         return v @ m[i]
-  
+
 
 class EntryMeasurement(RowMeasurement):
 

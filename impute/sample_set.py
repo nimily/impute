@@ -1,6 +1,9 @@
 import numpy as np
+import numpy.linalg as npl
 
-from .measurement import Measurement
+from typing import List, Tuple
+
+from .measurement import Measurement, RowMeasurement
 
 
 class SampleSet:
@@ -8,8 +11,8 @@ class SampleSet:
     def __init__(self, shape):
         self.shape = shape
 
-        self.xs = []
-        self.ys = []
+        self.xs: List[Measurement] = []
+        self.ys: List[float] = []
 
     def add_obs(self, x: Measurement, y: float):
         self.add_all_obs([x], [y])
@@ -22,7 +25,59 @@ class SampleSet:
         return np.array([x.sense(m) for x in self.xs])
 
     def adj_value(self, v):
-        return sum(y * x.as_matrix() for y, x in zip(v, self.xs))
+        total = np.zeros(self.shape)
+
+        for x, s in zip(self.xs, v):
+            x.add_to(total, s)
+
+        return total
 
     def rss_grad(self, b):
         return self.adj_value(self.value(b) - self.ys)
+
+    def op_norm(self):
+        xs = [x.as_matrix().flatten() for x in self.xs]
+        xs = np.array(xs)
+
+        return npl.norm(xs, 2)
+
+
+class RowSampleSet(SampleSet):
+
+    def __init__(self, shape):
+        super().__init__(shape)
+
+        self._op_norm = 0.0
+        self.buckets = [[] for _ in range(shape[0])]
+        self.dirty = [False for _ in range(shape[0])]
+        self.row_op_norms = np.zeros(shape[0])
+
+    def add_all_obs(self, xs: List[RowMeasurement], ys: List[float]):
+        super().add_all_obs(xs, ys)
+
+        for x, y in zip(xs, ys):
+            i = x.row_index
+
+            self.buckets[i].append((x, y))
+            self.dirty[i] = True
+
+    def op_norm(self):
+
+        if any(self.dirty):
+            self._update_all_row_op_norms()
+            self._op_norm = self.row_op_norms.max()
+
+        return self._op_norm
+
+    def _update_all_row_op_norms(self):
+        for i, d in enumerate(self.dirty):
+            if d:
+                self._update_row_op_norm(i)
+
+    def _update_row_op_norm(self, i):
+        xis = [x.row_value for x, y in self.buckets[i]]
+        xis = np.array(xis)
+
+        self.row_op_norms[i] = npl.norm(xis, 2)
+
+        self.dirty[i] = False
