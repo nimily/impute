@@ -9,5 +9,5 @@ setup(name='soft-impute',
       license='MIT',
       packages=['impute'],
       install_requires=['numpy >= 1.16.2',
-                        'sklearn >= 0.20.3'],
+                        'scikit-learn >= 0.20.3'],
       zip_safe=False)
