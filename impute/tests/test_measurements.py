@@ -1,5 +1,5 @@
 import numpy as np
-import numpy.linalg as npl
+import numpy.testing as npt
 
 from impute.measurement import EntryMeasurement
 from impute.measurement import RowMeasurement
@@ -20,26 +20,33 @@ def test_entry_measurements():
     assert total[i, j] == v * 0.5
 
     b = np.arange(shape[0] * shape[1]).reshape(shape)
-    assert m.sense(b) == v * (b[i, j])
+    assert m.sense(b) == v * b[i, j]
 
 
 def test_row_measurements():
-    shape = 5, 5
-    i, v = 1, np.arange(shape[1])
+    n_rows, n_cols = 5, 5
+    i, v = 1, np.arange(n_cols)
 
-    m = RowMeasurement(shape, i, v)
+    m = RowMeasurement(n_rows, i, v)
 
-    for j in range(shape[1]):
-        assert m.as_matrix()[i, j] == v[j]
+    as_matrix = m.as_matrix()
+    for j in range(n_rows):
+        if j == i:
+            npt.assert_array_almost_equal(as_matrix[j], v)
+        else:
+            npt.assert_array_almost_equal(as_matrix[j], np.zeros(n_cols))
 
-    total = np.zeros(shape)
+    total = np.zeros((n_rows, n_cols))
 
     m.add_to(total, 0.5)
-    for j in range(shape[1]):
-        assert total[i, j] == v[j] * 0.5
+    for j in range(n_rows):
+        if j == i:
+            npt.assert_array_almost_equal(total[j], v * 0.5)
+        else:
+            npt.assert_array_almost_equal(total[j], np.zeros(n_cols))
 
-    b = np.arange(shape[0] * shape[1]).reshape(shape)
-    assert npl.norm(m.sense(b) - v @ b[i]) <= 1e-5
+    b = np.arange(n_rows * n_cols).reshape((n_rows, -1))
+    npt.assert_array_almost_equal(m.sense(b), v @ b[i])
 
 
 def test_full_measurements():
@@ -48,9 +55,10 @@ def test_full_measurements():
 
     m1 = FullMeasurement(data)
 
+    as_matrix = m1.as_matrix()
     for i in range(shape[0]):
         for j in range(shape[1]):
-            assert m1.as_matrix()[i, j] == i * shape[1] + j
+            assert as_matrix[i, j] == i * shape[1] + j
 
     total = np.zeros(shape)
 
