@@ -46,9 +46,6 @@ class SoftImpute:
 
         return npl.norm(m_new - m_old), npl.norm(m_old)
 
-    def svt(self, w, alpha):
-        return self.svt_op(w, alpha)
-
     def fit(self,
             ss: EntrySampleSet,
             alphas: List[float],
@@ -71,6 +68,9 @@ class SoftImpute:
             zs.append(self.z_new)
 
         return zs
+
+    def svt(self, w, alpha):
+        return self.svt_op(w, alpha)
 
     def alpha_max(self, ss: EntrySampleSet):
         grad = ss.rss_grad(self.zero())
