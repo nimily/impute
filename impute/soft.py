@@ -15,7 +15,7 @@ class SoftImpute:
 
         self.starting_point = None
         self.z_old = None
-        self.z = None
+        self.z_new = None
 
         self._init_starting_point()
         self._init_z()
@@ -28,13 +28,17 @@ class SoftImpute:
             self.starting_point = np.copy(value)
 
     def _init_z(self):
-        self.z = self.starting_point
+        self.z_old = None
+        self.z_new = self.starting_point
 
     def update_once(self, ss: EntrySampleSet, alpha: float) -> Tuple[float, float]:
-        z_old = self.z
+        z_old = self.z_new
 
         y_new = z_old - ss.rss_grad(z_old)
         z_new = self.svt(y_new, alpha)
+
+        self.z_old = z_old
+        self.z_new = z_new
 
         return npl.norm(z_new - z_old), npl.norm(z_old)
 
@@ -60,7 +64,7 @@ class SoftImpute:
                 if delta_norm ** 2 <= tol * old_norm ** 2:
                     break
 
-            zs.append(self.z)
+            zs.append(self.z_new)
 
         return zs
 
