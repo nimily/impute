@@ -29,9 +29,9 @@ def test_alpha_max():
     alpha = imputer.alpha_max(ss)
     zs = imputer.fit(ss, [alpha, alpha * 0.999])
 
-    actual = zs[0]
+    actual = zs[0].to_matrix()
     expect = np.zeros(shape)
     npt.assert_array_almost_equal(actual, expect)
 
-    actual = npl.norm(zs[1])
+    actual = npl.norm(zs[1].to_matrix())
     assert actual > 1e-5

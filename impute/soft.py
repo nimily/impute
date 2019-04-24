@@ -4,7 +4,7 @@ import numpy as np
 import numpy.linalg as npl
 
 from .sample_set import EntrySampleSet
-from .utils import soft_svt
+from .utils import SVD, soft_svt
 
 
 class SoftImpute:
@@ -23,9 +23,11 @@ class SoftImpute:
     def _init_starting_point(self, value=None):
 
         if value is None:
-            self.starting_point = self.zero()
+            sp = self.zero()
         else:
-            self.starting_point = np.copy(value)
+            sp = np.copy(value)
+
+        self.starting_point = SVD.to_svd(sp)
 
     def _init_z(self):
         self.z_old = None
@@ -33,14 +35,16 @@ class SoftImpute:
 
     def update_once(self, ss: EntrySampleSet, alpha: float) -> Tuple[float, float]:
         z_old = self.z_new
+        m_old = z_old.to_matrix()
 
-        y_new = z_old - ss.rss_grad(z_old)
+        y_new = m_old - ss.rss_grad(m_old)
         z_new = self.svt(y_new, alpha)
+        m_new = z_new.to_matrix()
 
         self.z_old = z_old
         self.z_new = z_new
 
-        return npl.norm(z_new - z_old), npl.norm(z_old)
+        return npl.norm(m_new - m_old), npl.norm(m_old)
 
     def svt(self, w, alpha):
         return self.svt_op(w, alpha)
@@ -50,7 +54,7 @@ class SoftImpute:
             alphas: List[float],
             max_iters: int = 100,
             tol: float = 1e-5,
-            warm_start: bool = True):
+            warm_start: bool = True) -> List[SVD]:
 
         if not warm_start:
             self._init_z()
