@@ -1,44 +1,35 @@
 import numpy as np
 import numpy.linalg as npl
 import numpy.random as npr
+import numpy.testing as npt
 
-from impute.soft import update
-
-
-def run_tests():
-    npr.seed(1)
-
-    d, r = 200, 2
-
-    u = npr.normal(size=(d, r))
-    s = npr.uniform(0, 1, r)
-    v = npr.normal(size=(r, d))
-
-    x = u @ np.diag(s) @ v
-
-    mask = npr.binomial(1, 0.2, (d, d))
-
-    def proj(x):
-        return np.multiply(x, mask)
-
-    y = proj(x + npr.normal(0, 1, (d, d)))
-
-    def loss(x, lambda_):
-        return npl.norm(proj(x - y), 'f') + lambda_ * npl.norm(x, 'nuc')
-
-    lambda_ = 0.1
-
-    print(f'error: {loss(x, lambda_)}')
-
-    z_old = np.zeros((d, d))
-    print(loss(z_old, lambda_))
-
-    for i in range(10):
-        z_old = update(y, z_old, proj, 1, lambda_)
-        print(loss(z_old, lambda_))
-
-    print('test_soft.py: all tests passed.')
+from impute.measurement import EntryMeasurement
+from impute.sample_set import EntrySampleSet
+from impute.soft import SoftImpute
 
 
-if __name__ == '__main__':
-    run_tests()
+def test_alpha_max():
+    shape = 20, 20
+    n_rows, n_cols = shape
+
+    ss = EntrySampleSet(shape)
+
+    for i in range(n_rows):
+        for j in range(n_cols):
+            if (i + j) % 2 == 1:
+                x = EntryMeasurement(shape, i, j, 1)
+                y = npr.random()
+
+                ss.add_obs(x, y)
+
+    imputer = SoftImpute(shape)
+
+    alpha = imputer.alpha_max(ss)
+    zs = imputer.fit(ss, [alpha, alpha * 0.1])
+
+    actual = zs[0]
+    expect = np.zeros(shape)
+    npt.assert_array_almost_equal(actual, expect)
+
+    actual = npl.norm(zs[1])
+    assert actual > 1e-5
