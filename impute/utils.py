@@ -10,7 +10,7 @@ class SVD:
         self.v = v
 
     @staticmethod
-    def to_svd(w):
+    def to_svd(w) -> 'SVD':
         u, s, v = npl.svd(w, full_matrices=False)
 
         return SVD(u, s, v).trim()
