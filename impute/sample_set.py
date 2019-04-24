@@ -63,7 +63,9 @@ class RowSampleSet(SampleSet):
         self.dirty = [False for _ in range(self.shape[0])]
         self.row_op_norms = np.zeros(self.shape[0])
 
-    def _preprocess_obs(self, x: RowMeasurement, y: float):
+    def _preprocess_obs(self, x: Measurement, y: float):
+        assert isinstance(x, RowMeasurement)
+
         i = x.row_index
         self._op_norm_fresh = False
         self.dirty[i] = True
@@ -97,7 +99,9 @@ class EntrySampleSet(RowSampleSet):
     def _init_fast_op_norm(self):
         pass
 
-    def _preprocess_obs(self, x: EntryMeasurement, y: float):
+    def _preprocess_obs(self, x: Measurement, y: float):
+        assert isinstance(x, EntryMeasurement)
+
         self._op_norm = max(self._op_norm, x.entry_value)
 
     def _refresh_op_norm(self):
