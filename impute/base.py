@@ -1,7 +1,10 @@
-from typing import Optional, Tuple
+import abc
+
+from typing import Optional, List, Tuple, Any
 
 import numpy as np
 
+from .sample_set import SampleSet
 from .utils import SVD
 
 
@@ -33,3 +36,47 @@ class BaseImpute:
 
     def zero(self):
         return np.zeros(self.shape)
+
+    @abc.abstractmethod
+    def update_once(self,
+                    ss: SampleSet,
+                    alpha: float) -> Any:
+        pass
+
+    @abc.abstractmethod
+    def should_stop(self, metrics: Any) -> bool:
+        pass
+
+    def _prefit(self,
+                ss: SampleSet,
+                alphas: List[float],
+                max_iters: int = 100,
+                warm_start: bool = True,
+                **kwargs):
+        pass
+
+    def fit(self,
+            ss: SampleSet,
+            alphas: List[float],
+            max_iters: int = 100,
+            warm_start: bool = True,
+            **kwargs) -> List[SVD]:
+
+        self._prefit(ss, alphas, max_iters, warm_start, **kwargs)
+
+        if not warm_start:
+            self._init_z()
+
+        zs: List[SVD] = []
+
+        for alpha in alphas:
+            for _ in range(max_iters):
+                metrics = self.update_once(ss, alpha)
+
+                if self.should_stop(metrics):
+                    break
+
+            assert self.z_new is not None
+            zs.append(self.z_new)
+
+        return zs

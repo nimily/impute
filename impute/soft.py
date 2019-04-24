@@ -1,11 +1,13 @@
-from typing import List, Tuple
+from typing import Tuple, Any, List
 
 import numpy as np
 import numpy.linalg as npl
 
 from .base import BaseImpute
-from .sample_set import EntrySampleSet
+from .sample_set import EntrySampleSet, SampleSet
 from .utils import SVD, soft_svt
+
+DEFAULT_TOL = 1e-5
 
 
 class SoftImpute(BaseImpute):
@@ -13,9 +15,12 @@ class SoftImpute(BaseImpute):
     def __init__(self, shape, svt_op=soft_svt):
         super().__init__(shape)
 
+        self.tol = 0
         self.svt_op = svt_op
 
-    def update_once(self, ss: EntrySampleSet, alpha: float) -> Tuple[float, float]:
+    def update_once(self, ss: SampleSet, alpha: float) -> Tuple[float, float]:
+        assert isinstance(ss, EntrySampleSet)
+
         assert self.z_new is not None
         z_old = self.z_new
         m_old = z_old.to_matrix()
@@ -29,29 +34,26 @@ class SoftImpute(BaseImpute):
 
         return npl.norm(m_new - m_old), npl.norm(m_old)
 
-    def fit(self,
-            ss: EntrySampleSet,
-            alphas: List[float],
-            max_iters: int = 100,
-            tol: float = 1e-5,
-            warm_start: bool = True) -> List[SVD]:
+    def should_stop(self, metrics: Any) -> bool:
+        delta_norm, old_norm = metrics
 
-        if not warm_start:
-            self._init_z()
+        return delta_norm ** 2 < self.tol * old_norm ** 2
 
-        zs: List[SVD] = []
+    def _prefit(self,
+                ss: SampleSet,
+                alphas: List[float],
+                max_iters: int = 100,
+                warm_start: bool = True,
+                **kwargs):
 
-        for alpha in alphas:
-            for _ in range(max_iters):
-                delta_norm, old_norm = self.update_once(ss, alpha)
+        assert isinstance(ss, EntrySampleSet)
 
-                if delta_norm ** 2 <= tol * old_norm ** 2:
-                    break
+        if 'tol' in kwargs:
+            assert isinstance(kwargs['tol'], float)
 
-            assert self.z_new is not None
-            zs.append(self.z_new)
-
-        return zs
+            self.tol = kwargs['tol']
+        else:
+            self.tol = DEFAULT_TOL
 
     def svt(self, w, alpha: float) -> SVD:
         return self.svt_op(w, alpha)
