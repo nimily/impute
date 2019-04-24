@@ -1,7 +1,7 @@
+from typing import List, Tuple
+
 import numpy as np
 import numpy.linalg as npl
-
-from typing import List, Tuple
 
 from .sample_set import EntrySampleSet
 from .utils import soft_svt
@@ -58,7 +58,7 @@ class SoftImpute:
         zs = []
 
         for alpha in alphas:
-            for i in range(max_iters):
+            for _ in range(max_iters):
                 delta_norm, old_norm = self.update_once(ss, alpha)
 
                 if delta_norm ** 2 <= tol * old_norm ** 2:

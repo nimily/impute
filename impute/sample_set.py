@@ -1,7 +1,7 @@
+from typing import List
+
 import numpy as np
 import numpy.linalg as npl
-
-from typing import List
 
 from .measurement import Measurement, RowMeasurement, EntryMeasurement
 
@@ -93,9 +93,6 @@ class RowSampleSet(SampleSet):
 
 
 class EntrySampleSet(RowSampleSet):
-
-    def __init__(self, shape):
-        super().__init__(shape)
 
     def _init_fast_op_norm(self):
         pass
