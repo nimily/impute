@@ -3,37 +3,20 @@ from typing import List, Tuple
 import numpy as np
 import numpy.linalg as npl
 
+from .base import BaseImpute
 from .sample_set import EntrySampleSet
 from .utils import SVD, soft_svt
 
 
-class SoftImpute:
+class SoftImpute(BaseImpute):
 
     def __init__(self, shape, svt_op=soft_svt):
-        self.shape = shape
+        super().__init__(shape)
+
         self.svt_op = svt_op
 
-        self.starting_point = None
-        self.z_old = None
-        self.z_new = None
-
-        self._init_starting_point()
-        self._init_z()
-
-    def _init_starting_point(self, value=None):
-
-        if value is None:
-            sp = self.zero()
-        else:
-            sp = np.copy(value)
-
-        self.starting_point = SVD.to_svd(sp)
-
-    def _init_z(self):
-        self.z_old = None
-        self.z_new = self.starting_point
-
     def update_once(self, ss: EntrySampleSet, alpha: float) -> Tuple[float, float]:
+        assert self.z_new is not None
         z_old = self.z_new
         m_old = z_old.to_matrix()
 
@@ -56,7 +39,7 @@ class SoftImpute:
         if not warm_start:
             self._init_z()
 
-        zs = []
+        zs: List[SVD] = []
 
         for alpha in alphas:
             for _ in range(max_iters):
@@ -65,11 +48,12 @@ class SoftImpute:
                 if delta_norm ** 2 <= tol * old_norm ** 2:
                     break
 
+            assert self.z_new is not None
             zs.append(self.z_new)
 
         return zs
 
-    def svt(self, w, alpha):
+    def svt(self, w, alpha: float) -> SVD:
         return self.svt_op(w, alpha)
 
     def alpha_max(self, ss: EntrySampleSet):
