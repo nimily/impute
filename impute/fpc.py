@@ -1,12 +1,13 @@
 from typing import List, Tuple, Any
 from collections import namedtuple
 
-# import numpy as np
+import numpy as np
 import numpy.linalg as npl
 
 from .base import LagrangianImpute
 from .sample_set import SampleSet
-from .utils import soft_svt
+from .measurement import Measurement
+from .utils import soft_svt, SVD
 
 DEFAULT_XTOL = 1e-5
 
@@ -43,6 +44,24 @@ class FpcImpute(LagrangianImpute):
             d_norm=npl.norm(m_new - m_old),
             o_norm=npl.norm(m_old)
         )
+
+    @staticmethod
+    def debias(ss: SampleSet, u, v) -> SVD:
+
+        def transform(x: Measurement):
+            m = x.as_matrix(u.T, v.T)
+
+            if np.ndim(m) == 2:
+                return m.diagonal()
+
+            return [m]
+
+        xs = np.array([transform(x) for x in ss.xs])
+        ys = ss.ys
+
+        s, *_ = npl.lstsq(xs, ys, rcond=None)
+
+        return SVD(u, s, v)
 
     def should_stop(self, metrics: Any) -> bool:
         assert isinstance(metrics, FpcMetrics)

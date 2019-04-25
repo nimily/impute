@@ -3,8 +3,9 @@ import numpy.linalg as npl
 import numpy.random as npr
 import numpy.testing as npt
 
+import pytest
+
 from impute.sample_set import EntrySampleSet
-from impute.soft import SoftImpute
 from impute.fpc import FpcImpute
 
 
@@ -24,9 +25,8 @@ def test_fpc_alpha_max():
 
                 ss.add_obs(x, y)
 
-    alpha = SoftImpute(shape).alpha_max(ss)
-
     imputer = FpcImpute(shape)
+    alpha = imputer.alpha_max(ss)
 
     zs = imputer.fit(ss, [alpha, alpha * 0.999])
 
@@ -36,3 +36,38 @@ def test_fpc_alpha_max():
 
     actual = npl.norm(zs[1].to_matrix())
     assert actual > 1e-5
+
+
+@pytest.mark.parametrize(
+    "rank",
+    range(1, 5)
+)
+def test_fpc_debias(rank):
+    npr.seed(314159265)
+
+    shape = 30, 35
+    n_rows, n_cols = shape
+    rank = 3
+
+    ss = EntrySampleSet(shape)
+
+    for i in range(n_rows):
+        for j in range(n_cols):
+            if (i + j) % 2 == 1:
+                x = (i, j, 1)
+                y = npr.randn()
+
+                ss.add_obs(x, y)
+
+    u = npr.randn(n_rows, rank)
+    v = npr.randn(rank, n_cols)
+
+    svd = FpcImpute.debias(ss, u, v)
+
+    z = svd.to_matrix()
+    g = u.T @ ss.rss_grad(z) @ v.T
+
+    actual = np.diagonal(g)
+    expect = np.zeros(rank)
+
+    npt.assert_array_almost_equal(actual, expect)
