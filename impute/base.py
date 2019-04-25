@@ -3,6 +3,7 @@ import abc
 from typing import Optional, List, Tuple, Any
 
 import numpy as np
+import numpy.linalg as npl
 
 from .sample_set import SampleSet
 from .utils import SVD
@@ -80,3 +81,21 @@ class BaseImpute:
             zs.append(self.z_new)
 
         return zs
+
+    def alpha_max(self, ss: SampleSet) -> float:
+        grad = ss.rss_grad(self.zero())
+
+        return npl.norm(grad, 2)
+
+    def get_alpha_seq(self, ss: SampleSet, alpha_min: float, eta: float) -> List[float]:
+        alphas = []
+
+        alpha = self.alpha_max(ss)
+        while alpha > alpha_min:
+            alphas.append(alpha)
+
+            alpha *= eta
+
+        alphas.append(alpha_min)
+
+        return alphas

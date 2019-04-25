@@ -1,6 +1,5 @@
 from typing import Tuple, Any, List
 
-import numpy as np
 import numpy.linalg as npl
 
 from .base import BaseImpute
@@ -57,11 +56,3 @@ class SoftImpute(BaseImpute):
 
     def svt(self, w, alpha: float) -> SVD:
         return self.svt_op(w, alpha)
-
-    def alpha_max(self, ss: EntrySampleSet):
-        grad = ss.rss_grad(self.zero())
-
-        return npl.norm(grad, 2)
-
-    def zero(self):
-        return np.zeros(self.shape)
