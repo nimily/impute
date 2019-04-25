@@ -2,11 +2,13 @@ import abc
 
 import numpy as np
 
+from .utils import one_hot
+
 
 class Measurement:
 
     @abc.abstractmethod
-    def as_matrix(self):
+    def as_matrix(self, left=None, right=None):
         pass
 
     @property
@@ -43,8 +45,18 @@ class FullMeasurement(Measurement):
     def n_cols(self):
         return self.val.shape[1]
 
-    def as_matrix(self):
-        return self.val.copy()
+    def as_matrix(self, left=None, right=None):
+        if left is None and right is None:
+            return self.val.copy()
+
+        x = self.val
+        if left is not None:
+            x = left @ x
+
+        if right is not None:
+            x = x @ right
+
+        return x
 
 
 class RowMeasurement(FullMeasurement):
@@ -72,14 +84,19 @@ class RowMeasurement(FullMeasurement):
     def row_value(self):
         return self.val[1]
 
-    def as_matrix(self):
-        x = np.zeros(self.shape)
-
+    def as_matrix(self, left=None, right=None):
         i = self.row_index
         v = self.row_value
-        x[i] = v
 
-        return x
+        if right is not None:
+            v = v @ right
+
+        if left is None:
+            u = one_hot(self.n_rows, i, 1)
+        else:
+            u = left[:, i]
+
+        return np.outer(u, v)
 
     def add_to(self, m, scale):
         i = self.row_index
@@ -115,10 +132,9 @@ class EntryMeasurement(RowMeasurement):
     @property
     def row_value(self):
         j = self.col_index
-        v = np.zeros(self.n_cols)
-        v[j] = self.entry_value
+        v = self.entry_value
 
-        return v
+        return one_hot(self.n_cols, j, v)
 
     def add_to(self, m, scale):
         i = self.row_index

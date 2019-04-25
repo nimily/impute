@@ -44,3 +44,10 @@ def hard_svt(w, level):
     func = np.vectorize(lambda x: 0 if x < level else x)
 
     return svt(w, func)
+
+
+def one_hot(shape, pos, val=1):
+    x = np.zeros(shape)
+    x[pos] = val
+
+    return x
