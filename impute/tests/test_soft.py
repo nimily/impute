@@ -3,7 +3,6 @@ import numpy.linalg as npl
 import numpy.random as npr
 import numpy.testing as npt
 
-from impute.measurement import EntryMeasurement
 from impute.sample_set import EntrySampleSet
 from impute.soft import SoftImpute
 
@@ -19,7 +18,7 @@ def test_alpha_max():
     for i in range(n_rows):
         for j in range(n_cols):
             if (i + j) % 2 == 1:
-                x = EntryMeasurement(shape, i, j, 1)
+                x = (i, j, 1)
                 y = 1 + npr.random()
 
                 ss.add_obs(x, y)
