@@ -1,4 +1,4 @@
-from typing import List
+from typing import Tuple, List, Any
 
 import numpy as np
 import numpy.linalg as npl
@@ -15,14 +15,24 @@ class SampleSet:
         self.ys: List[float] = []
 
     def add_all_obs(self, xs, ys):
+        xs, ys = self._preprocess_all_obs(xs, ys)
+
         self.xs.extend(xs)
         self.ys.extend(ys)
 
-        for x, y in zip(xs, ys):
-            self._preprocess_obs(x, y)
+    def _preprocess_all_obs(self, xs: List[Any], ys: List[float])\
+            -> Tuple[List[Measurement], List[float]]:
 
-    def _preprocess_obs(self, x: Measurement, y: float):
-        pass
+        obs = [self._preprocess_obs(x, y) for x, y in zip(xs, ys)]
+
+        xs = [x for x, _ in obs]
+        ys = [y for _, y in obs]
+
+        return xs, ys
+
+    def _preprocess_obs(self, x: Any, y: float) -> Tuple[Measurement, float]:
+        assert isinstance(x, Measurement)
+        return x, y
 
     def add_obs(self, x: Measurement, y: float):
         self.add_all_obs([x], [y])
@@ -63,13 +73,21 @@ class RowSampleSet(SampleSet):
         self.dirty = [False for _ in range(self.shape[0])]
         self.row_op_norms = np.zeros(self.shape[0])
 
-    def _preprocess_obs(self, x: Measurement, y: float):
-        assert isinstance(x, RowMeasurement)
+    def _preprocess_obs(self, x: Any, y: float):
+        if isinstance(x, tuple):
+            assert len(x) == 2
+
+            i, v = x
+            x = RowMeasurement(self.shape[0], i, v)
+        else:
+            assert isinstance(x, RowMeasurement)
 
         i = x.row_index
         self._op_norm_fresh = False
         self.dirty[i] = True
         self.buckets[i].append((x, y))
+
+        return x, y
 
     def op_norm(self):
         if not self._op_norm_fresh:
@@ -99,10 +117,18 @@ class EntrySampleSet(RowSampleSet):
     def _init_fast_op_norm(self):
         pass
 
-    def _preprocess_obs(self, x: Measurement, y: float):
-        assert isinstance(x, EntryMeasurement)
+    def _preprocess_obs(self, x: Any, y: float):
+        if isinstance(x, tuple):
+            assert len(x) == 3
+
+            i, j, v = x
+            x = EntryMeasurement(self.shape, i, j, v)
+        else:
+            assert isinstance(x, EntryMeasurement)
 
         self._op_norm = max(self._op_norm, x.entry_value)
+
+        return x, y
 
     def _refresh_op_norm(self):
         pass

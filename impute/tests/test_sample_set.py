@@ -97,7 +97,7 @@ def test_sample_set_op_norm():
     npt.assert_almost_equal(actual, expect)
 
 
-def test_row_sample_set_op_norm():
+def test_row_sample_set_op_norm1():
     shape = 5, 5
 
     rows = [i for i in range(shape[0])] * 2
@@ -115,7 +115,31 @@ def test_row_sample_set_op_norm():
     npt.assert_almost_equal(actual, expect)
 
 
-def test_entry_sample_set_op_norm():
+def test_row_sample_set_op_norm2():
+    shape = 5, 5
+
+    rows = [i for i in range(shape[0])] * 2
+    cols = [j // 2 for j in range(2 * shape[0])]
+    vals = [i ** 0.5 for i in range(shape[0] * 2)]
+
+    def one_hot(i):
+        v = np.zeros(shape[1])
+        v[i] = 1
+
+        return v
+
+    xs = [(r, one_hot(c) * v) for r, c, v in zip(rows, cols, vals)]
+    ys = [i ** 1.5 for i in range(2 * shape[0])]
+
+    ss = RowSampleSet(shape)
+    ss.add_all_obs(xs, ys)
+
+    actual = ss.op_norm()
+    expect = max(vals)
+    npt.assert_almost_equal(actual, expect)
+
+
+def test_entry_sample_set_op_norm1():
     shape = 5, 5
 
     rows = [i for i in range(shape[0])] * 2
@@ -123,6 +147,24 @@ def test_entry_sample_set_op_norm():
     vals = [i ** 0.5 for i in range(shape[0] * 2)]
 
     xs = [EntryMeasurement(shape, r, c, v) for r, c, v in zip(rows, cols, vals)]
+    ys = [i ** 1.5 for i in range(2 * shape[0])]
+
+    ss = EntrySampleSet(shape)
+    ss.add_all_obs(xs, ys)
+
+    actual = ss.op_norm()
+    expect = max(vals)
+    npt.assert_almost_equal(actual, expect)
+
+
+def test_entry_sample_set_op_norm2():
+    shape = 5, 5
+
+    rows = [i for i in range(shape[0])] * 2
+    cols = [j // 2 for j in range(2 * shape[0])]
+    vals = [i ** 0.5 for i in range(shape[0] * 2)]
+
+    xs = list(zip(rows, cols, vals))
     ys = [i ** 1.5 for i in range(2 * shape[0])]
 
     ss = EntrySampleSet(shape)
