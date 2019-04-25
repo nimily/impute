@@ -34,7 +34,7 @@ class SampleSet:
         assert isinstance(x, Measurement)
         return x, y
 
-    def add_obs(self, x: Measurement, y: float):
+    def add_obs(self, x: Any, y: float):
         self.add_all_obs([x], [y])
 
     def value(self, m):
