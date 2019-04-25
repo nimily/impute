@@ -1,4 +1,5 @@
 from typing import List, Tuple, Any
+from collections import namedtuple
 
 # import numpy as np
 import numpy.linalg as npl
@@ -8,6 +9,8 @@ from .sample_set import SampleSet
 from .utils import soft_svt
 
 DEFAULT_XTOL = 1e-5
+
+FpcMetrics = namedtuple('Metric', 'd_norm o_norm')
 
 
 class FpcImpute(BaseImpute):
@@ -36,9 +39,20 @@ class FpcImpute(BaseImpute):
         self.z_old = z_old
         self.z_new = z_new
 
-        return npl.norm(m_new - m_old), npl.norm(m_old)
+        return FpcMetrics(
+            d_norm=npl.norm(m_new - m_old),
+            o_norm=npl.norm(m_old)
+        )
 
     def should_stop(self, metrics: Any) -> bool:
+        assert isinstance(metrics, FpcMetrics)
+
+        d_norm = metrics.d_norm
+        o_norm = metrics.o_norm
+
+        if d_norm < self.xtol * max(1, o_norm):
+            return True
+
         return False
 
     def _prefit(self,
