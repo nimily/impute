@@ -51,7 +51,7 @@ class FpcImpute(BaseImpute):
         if 'tau' in kwargs:
             self.tau = kwargs['tau']
         else:
-            self.tau = 2 / ss.op_norm() ** 2
+            self.tau = 1 / ss.op_norm() ** 2
 
         if 'xtol' in kwargs:
             assert isinstance(kwargs['xtol'], float)
