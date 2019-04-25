@@ -39,6 +39,13 @@ class BaseImpute:
         return np.zeros(self.shape)
 
     @abc.abstractmethod
+    def impute(self, ss: SampleSet, **kwargs) -> SVD:
+        pass
+
+
+class LagrangianImpute(BaseImpute):
+
+    @abc.abstractmethod
     def update_once(self,
                     ss: SampleSet,
                     alpha: float) -> Any:
@@ -81,6 +88,20 @@ class BaseImpute:
             zs.append(self.z_new)
 
         return zs
+
+    def impute(self, ss: SampleSet, **kwargs) -> SVD:
+        assert 'alpha' in kwargs
+        alpha_min = kwargs['alpha']
+
+        if 'eta' in kwargs:
+            eta = kwargs['eta']
+            assert isinstance(eta, float)
+        else:
+            eta = 0.25
+
+        alphas = self.get_alpha_seq(ss, alpha_min, eta)
+
+        return self.fit(ss, alphas)[-1]
 
     def alpha_max(self, ss: SampleSet) -> float:
         grad = ss.rss_grad(self.zero())

@@ -4,7 +4,7 @@ from collections import namedtuple
 # import numpy as np
 import numpy.linalg as npl
 
-from .base import BaseImpute
+from .base import LagrangianImpute
 from .sample_set import SampleSet
 from .utils import soft_svt
 
@@ -13,7 +13,7 @@ DEFAULT_XTOL = 1e-5
 FpcMetrics = namedtuple('Metric', 'd_norm o_norm')
 
 
-class FpcImpute(BaseImpute):
+class FpcImpute(LagrangianImpute):
 
     def __init__(self, shape: Tuple[int, int]):
         super().__init__(shape)

@@ -2,14 +2,14 @@ from typing import Tuple, Any, List
 
 import numpy.linalg as npl
 
-from .base import BaseImpute
+from .base import LagrangianImpute
 from .sample_set import EntrySampleSet, SampleSet
 from .utils import SVD, soft_svt
 
 DEFAULT_TOL = 1e-5
 
 
-class SoftImpute(BaseImpute):
+class SoftImpute(LagrangianImpute):
 
     def __init__(self, shape, svt_op=soft_svt):
         super().__init__(shape)
