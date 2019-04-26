@@ -1,3 +1,4 @@
+from math import inf, isfinite
 from typing import List, Tuple, Any
 from collections import namedtuple
 
@@ -10,6 +11,8 @@ from .measurement import Measurement
 from .utils import soft_svt, SVD
 
 DEFAULT_XTOL = 1e-5
+DEFAULT_GTOL = 1e-5
+DEFAULT_DTOL = inf
 
 FpcMetrics = namedtuple('Metric', 'd_norm o_norm')
 
@@ -21,8 +24,9 @@ class FpcImpute(LagrangianImpute):
 
         self.tau: float = 0.0
 
-        self.xtol: float = 0.0
-        self.gtol: float = 0.0
+        self.xtol: float = DEFAULT_XTOL
+        self.gtol: float = DEFAULT_GTOL
+        self.dtol: float = DEFAULT_DTOL
 
     def update_once(self,
                     ss: SampleSet,
@@ -33,15 +37,28 @@ class FpcImpute(LagrangianImpute):
         z_old = self.z_new
         m_old = z_old.to_matrix()
 
-        y_new = m_old - tau * ss.rss_grad(m_old)
+        g_old = ss.rss_grad(m_old)
+        y_new = m_old - tau * g_old
         z_new = soft_svt(y_new, tau * alpha)
         m_new = z_new.to_matrix()
+
+        d_norm = npl.norm(m_new - m_old)
+        g_norm = npl.norm(g_old, 2)
+
+        if isfinite(self.dtol):
+            if g_norm > self.dtol * d_norm:
+                u = z_new.u
+                v = z_new.v
+
+                z_new = FpcImpute.debias(ss, u, v)
+                m_new = z_new.to_matrix()
+                d_norm = npl.norm(m_new - m_old)
 
         self.z_old = z_old
         self.z_new = z_new
 
         return FpcMetrics(
-            d_norm=npl.norm(m_new - m_old),
+            d_norm=d_norm,
             o_norm=npl.norm(m_old)
         )
 
@@ -96,3 +113,8 @@ class FpcImpute(LagrangianImpute):
         if 'gtol' in kwargs:
             assert isinstance(kwargs['gtol'], float)
             self.gtol = kwargs['gtol']
+
+        if 'dtol' in kwargs:
+            assert isinstance(kwargs['dtol'], float)
+            self.dtol = kwargs['dtol']
+
