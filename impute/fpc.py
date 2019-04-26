@@ -10,11 +10,11 @@ from .sample_set import SampleSet
 from .measurement import Measurement
 from .utils import soft_svt, SVD
 
-DEFAULT_XTOL = 1e-5
-DEFAULT_GTOL = 1e-5
+DEFAULT_XTOL = 1e-3
+DEFAULT_GTOL = 0.0
 DEFAULT_DTOL = inf
 
-FpcMetrics = namedtuple('Metric', 'd_norm o_norm')
+FpcMetrics = namedtuple('Metric', 'd_norm o_norm opt_cond')
 
 
 class FpcImpute(LagrangianImpute):
@@ -30,7 +30,7 @@ class FpcImpute(LagrangianImpute):
 
     def update_once(self,
                     ss: SampleSet,
-                    alpha: float) -> Tuple[float, float]:
+                    alpha: float) -> FpcMetrics:
         tau = self.tau
 
         assert self.z_new is not None
@@ -43,9 +43,11 @@ class FpcImpute(LagrangianImpute):
         m_new = z_new.to_matrix()
 
         d_norm = npl.norm(m_new - m_old)
-        g_norm = npl.norm(g_old, 2)
 
+        # debiasing
         if isfinite(self.dtol):
+            g_norm = npl.norm(g_old, 2)
+
             if g_norm > self.dtol * d_norm:
                 u = z_new.u
                 v = z_new.v
@@ -54,12 +56,18 @@ class FpcImpute(LagrangianImpute):
                 m_new = z_new.to_matrix()
                 d_norm = npl.norm(m_new - m_old)
 
+        if self.gtol > 0.0:
+            opt_cond = npl.norm(z_new.u @ z_new.v + g_old / alpha, 2) - 1
+        else:
+            opt_cond = None
+
         self.z_old = z_old
         self.z_new = z_new
 
         return FpcMetrics(
             d_norm=d_norm,
-            o_norm=npl.norm(m_old)
+            o_norm=npl.norm(m_old),
+            opt_cond=opt_cond
         )
 
     @staticmethod
@@ -87,6 +95,9 @@ class FpcImpute(LagrangianImpute):
         o_norm = metrics.o_norm
 
         if d_norm < self.xtol * max(1, o_norm):
+            return True
+
+        if self.gtol > 0 and metrics.opt_cond < self.gtol:
             return True
 
         return False
@@ -117,4 +128,3 @@ class FpcImpute(LagrangianImpute):
         if 'dtol' in kwargs:
             assert isinstance(kwargs['dtol'], float)
             self.dtol = kwargs['dtol']
-
