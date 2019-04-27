@@ -110,7 +110,7 @@ def test_fpc_strong_optimality(seed, alpha_ratio):
     rank = 5
     n_obs = 25 * 1000
 
-    b, ss = gen_random_data(n_rows, n_cols, rank, n_obs)
+    _, ss = gen_random_data(n_rows, n_cols, rank, n_obs)
 
     imputer = FpcImpute(shape)
     alpha = imputer.alpha_max(ss) * alpha_ratio
