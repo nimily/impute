@@ -12,7 +12,7 @@ from impute.fpc import FpcImpute
 def test_fpc_alpha_max():
     npr.seed(314159265)
 
-    shape = 40, 80
+    shape = 300, 300
     n_rows, n_cols = shape
 
     ss = EntrySampleSet(shape)

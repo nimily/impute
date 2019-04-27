@@ -114,6 +114,12 @@ class RowSampleSet(SampleSet):
 
 class EntrySampleSet(RowSampleSet):
 
+    def __init__(self, shape):
+        super().__init__(shape)
+
+        self.xx = np.zeros(shape)
+        self.xy = np.zeros(shape)
+
     def _init_fast_op_norm(self):
         pass
 
@@ -126,9 +132,19 @@ class EntrySampleSet(RowSampleSet):
         else:
             assert isinstance(x, EntryMeasurement)
 
-        self._op_norm = max(self._op_norm, x.entry_value)
+            i = x.row_index
+            j = x.col_index
+            v = x.entry_value
+
+        self.xx[i, j] += v ** 2
+        self.xy[i, j] += v * y
+
+        self._op_norm = max(self._op_norm, self.xx[i, j] ** 0.5)
 
         return x, y
 
     def _refresh_op_norm(self):
-        pass
+        self._op_norm = self.xx.max() ** 0.5
+
+    def rss_grad(self, b):
+        return np.multiply(self.xx, b) - self.xy
