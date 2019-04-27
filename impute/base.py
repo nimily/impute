@@ -101,7 +101,7 @@ class LagrangianImpute(BaseImpute):
 
         alphas = self.get_alpha_seq(ss, alpha_min, eta)
 
-        return self.fit(ss, alphas)[-1]
+        return self.fit(ss, alphas, **kwargs)[-1]
 
     def alpha_max(self, ss: SampleSet) -> float:
         grad = ss.rss_grad(self.zero())
