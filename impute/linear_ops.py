@@ -4,6 +4,7 @@ from typing import Tuple, List, Union, Optional, Type
 from functools import reduce
 
 import numpy as np
+import numpy.linalg as npl
 
 
 vector = Union[np.ndarray]
@@ -54,18 +55,22 @@ class LinearOp(abc.ABC):
 
     @property
     def xtx(self) -> 'LinearOp':
-        return CompositeLinearOp(self.t, self, adjoint='self')
+        return AdjointCompositeLinearOp(self)
 
     @property
     def xxt(self) -> 'LinearOp':
-        return CompositeLinearOp(self, self.t, adjoint='self')
+        return AdjointCompositeLinearOp(self.t)
+
+    @abc.abstractmethod
+    def norm(self) -> float:
+        pass
 
 
 class CompositeLinearOp(LinearOp):
 
     def __init__(self,
                  *ops: LinearOp,
-                 adjoint: Optional[Union['LinearOp', str]] = None):
+                 adjoint: Optional[Union[LinearOp, str]] = None):
         for i in range(len(ops) - 1):
             op1 = ops[i]
             op2 = ops[i - 1]
@@ -89,6 +94,18 @@ class CompositeLinearOp(LinearOp):
 
     def evaluate_t(self, b: vector) -> vector:
         return reduce(lambda y, op: op.evaluate_t(y), self.ops, b)
+
+    def norm(self) -> float:
+        raise NotImplemented
+
+
+class AdjointCompositeLinearOp(CompositeLinearOp):
+
+    def __init__(self, op: LinearOp):
+        super().__init__(op.t, op)
+
+    def norm(self) -> float:
+        return self.ops[1].norm() ** 2
 
 
 class TransposeLinearOp(LinearOp):
@@ -120,6 +137,9 @@ class TransposeLinearOp(LinearOp):
     def xxt(self) -> LinearOp:
         return self.adjoint.xtx
 
+    def norm(self) -> float:
+        return self.adjoint.norm()
+
 
 class TraceLinearOp(LinearOp):
 
@@ -129,6 +149,14 @@ class TraceLinearOp(LinearOp):
         self._i_shape = i_shape
 
         self._init_xs()
+        self._init_norm()
+
+    def _init_xs(self):
+        self.xs: List[vector] = []
+
+    def _init_norm(self):
+        self._norm = 0
+        self.dirty = False
 
     @property
     def i_shape(self):
@@ -137,9 +165,6 @@ class TraceLinearOp(LinearOp):
     @property
     def o_shape(self):
         return tuple([len(self.xs)])
-
-    def _init_xs(self):
-        self.xs: List[vector] = []
 
     def add(self, x: vector):
         self.add_all([x])
@@ -150,8 +175,22 @@ class TraceLinearOp(LinearOp):
 
         self.xs.extend(xs)
 
+        if len(xs) > 0:
+            self.dirty = True
+
     def evaluate(self, b: vector) -> vector:
         return np.array([np.trace(x @ b.T) for x in self.xs])
 
     def evaluate_t(self, b: vector) -> vector:
         return sum(c * x for c, x in zip(b, self.xs))
+
+    def norm(self) -> float:
+        if self.dirty:
+            self.refresh_norm()
+
+        return self._norm
+
+    def refresh_norm(self):
+        xs = np.array([x.flatten() for x in self.xs])
+
+        self._norm = npl.norm(xs, 2)

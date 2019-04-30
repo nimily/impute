@@ -124,3 +124,78 @@ def test_xxt(seed):
     expect = op.evaluate(op.evaluate_t(b))
 
     npt.assert_array_almost_equal(actual, expect)
+
+
+@pytest.mark.parametrize(
+    'seed',
+    range(5)
+)
+def test_norm(seed):
+    npr.seed(seed)
+
+    shape = 25, 25
+
+    n_sample = 1000
+
+    op, entries = create_trace_op(shape, n_sample)
+
+    b = npr.rand(n_sample)
+
+    m = np.zeros(shape)
+    for p, v, _ in entries:
+        m[p] += v ** 2
+
+    actual = op.norm()
+    expect = m.max() ** 0.5
+
+    npt.assert_array_almost_equal(actual, expect)
+
+
+@pytest.mark.parametrize(
+    'seed',
+    range(5)
+)
+def test_xtx_norm(seed):
+    npr.seed(seed)
+
+    shape = 25, 25
+
+    n_sample = 1000
+
+    op, entries = create_trace_op(shape, n_sample)
+
+    b = npr.rand(n_sample)
+
+    m = np.zeros(shape)
+    for p, v, _ in entries:
+        m[p] += v ** 2
+
+    actual = op.xtx.norm()
+    expect = m.max()
+
+    npt.assert_array_almost_equal(actual, expect)
+
+
+@pytest.mark.parametrize(
+    'seed',
+    range(5)
+)
+def test_xxt_norm(seed):
+    npr.seed(seed)
+
+    shape = 25, 25
+
+    n_sample = 1000
+
+    op, entries = create_trace_op(shape, n_sample)
+
+    b = npr.rand(n_sample)
+
+    m = np.zeros(shape)
+    for p, v, _ in entries:
+        m[p] += v ** 2
+
+    actual = op.xxt.norm()
+    expect = m.max()
+
+    npt.assert_array_almost_equal(actual, expect)
