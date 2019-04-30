@@ -142,7 +142,7 @@ class TransposeLinearOp(LinearOp):
         return self.adjoint.norm()
 
 
-X = TypeVar('X')
+X = TypeVar('X', vector, int)
 
 
 class IncrementalData(Generic[X]):
@@ -168,9 +168,6 @@ class IncrementalData(Generic[X]):
 
     def preprocess_data(self, xs: List[X]):
         pass
-        # for x in xs:
-        #     if hasattr(x, 'shape'):
-        #         assert x.shape == self.i_shape
 
     def postprocess_data(self, xs: List[X]):
         if not xs:
