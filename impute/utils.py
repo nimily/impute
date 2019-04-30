@@ -46,7 +46,7 @@ def hard_svt(w, level):
     return svt(w, func)
 
 
-def one_hot(shape, pos, val=1):
+def one_hot(shape, pos, val=1) -> np.ndarray:
     x = np.zeros(shape)
     x[pos] = val
 
