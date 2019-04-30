@@ -9,12 +9,16 @@ import numpy.linalg as npl
 
 vector = Union[np.ndarray]
 
+full_matrix = vector
+row_matrix = Tuple[int, vector]
+entry_matrix = Tuple[int, int, float]
+
 
 class LinearOp(abc.ABC):
 
     LinearOpType = Type['LinearOp']
 
-    def __init__(self, adjoint: Optional[Union['LinearOp', str]] = None):
+    def __init__(self, adjoint: Optional[Union['LinearOp', str]] = None, **kwargs):
         super().__init__()
 
         if adjoint == 'self':
@@ -70,15 +74,15 @@ class LinearOp(abc.ABC):
 class CompositeLinearOp(LinearOp):
 
     def __init__(self,
-                 *ops: LinearOp,
-                 adjoint: Optional[Union[LinearOp, str]] = None):
+                 ops: Tuple[LinearOp],
+                 **kwargs):
         for i in range(len(ops) - 1):
             op1 = ops[i]
             op2 = ops[i - 1]
 
             assert op2.i_shape == op1.o_shape
 
-        super().__init__(adjoint)
+        super().__init__(**kwargs)
 
         self.ops: Tuple[LinearOp, ...] = ops
 
@@ -100,10 +104,42 @@ class CompositeLinearOp(LinearOp):
         raise NotImplementedError
 
 
-class AdjointCompositeLinearOp(CompositeLinearOp):
+class SelfAdjointOp(LinearOp):
 
-    def __init__(self, op: LinearOp):
-        super().__init__(op.t, op)
+    def __init__(self, **kwargs):
+        kwargs.update({
+            'adjoint': self,
+        })
+
+        super().__init__(**kwargs)
+
+    def evaluate_t(self, b: vector) -> vector:
+        return self.evaluate(b)
+
+    def xtx(self) -> 'SelfAdjointOp':
+        return self.square
+
+    def xxt(self) -> 'SelfAdjointOp':
+        return self.square
+
+    @property
+    @abc.abstractmethod
+    def square(self) -> 'SelfAdjointOp':
+        pass
+
+
+class AdjointCompositeLinearOp(SelfAdjointOp, CompositeLinearOp):
+
+    def __init__(self, op: LinearOp, **kwargs):
+        kwargs.update({
+            'ops': (op.t, op)
+        })
+
+        super().__init__(**kwargs)
+
+    @property
+    def square(self) -> (SelfAdjointOp, CompositeLinearOp):
+        return AdjointCompositeLinearOp(self)
 
     def norm(self) -> float:
         return self.ops[1].norm() ** 2
@@ -111,8 +147,8 @@ class AdjointCompositeLinearOp(CompositeLinearOp):
 
 class TransposeLinearOp(LinearOp):
 
-    def __init__(self, adjoint: LinearOp):
-        super().__init__(None)
+    def __init__(self, adjoint: LinearOp, **kwargs):
+        super().__init__(**kwargs)
 
         self.adjoint: LinearOp = adjoint
 
@@ -140,6 +176,32 @@ class TransposeLinearOp(LinearOp):
 
     def norm(self) -> float:
         return self.adjoint.norm()
+
+
+class HadamardLinearOp(SelfAdjointOp):
+
+    def __init__(self, coefs: vector, **kwargs):
+        super().__init__(**kwargs)
+
+        self.coefs = coefs
+
+    @property
+    def i_shape(self):
+        return self.coefs.shape
+
+    @property
+    def o_shape(self):
+        return self.coefs.shape
+
+    def evaluate(self, b: vector) -> vector:
+        return np.multiply(self.coefs, b)
+
+    def norm(self) -> float:
+        pass
+
+    @property
+    def square(self) -> 'SelfAdjointOp':
+        return HadamardLinearOp(self.coefs ** 2)
 
 
 X = TypeVar('X')
@@ -255,9 +317,6 @@ class DenseTraceLinearOp(LinearOp, IncrementalData[vector]):
         self._norm = npl.norm(xs, 2)
 
 
-row_matrix = Tuple[int, vector]
-
-
 class RowTraceLinearOp(LinearOp, IncrementalData[row_matrix]):
 
     def __init__(self, i_shape: Tuple[int, int]):
@@ -301,9 +360,6 @@ class RowTraceLinearOp(LinearOp, IncrementalData[row_matrix]):
         self.fresh = True
 
 
-entry_matrix = Tuple[int, int, float]
-
-
 class EntryTraceLinearOp(LinearOp, IncrementalData[entry_matrix]):
 
     def __init__(self, i_shape: Tuple[int, int]):
@@ -317,12 +373,18 @@ class EntryTraceLinearOp(LinearOp, IncrementalData[entry_matrix]):
         self.cols: List[int] = []
         self.vals: List[float] = []
 
+        self._xtx = np.zeros(i_shape)
+
     def postprocess_data(self, xs: List[entry_matrix]):
         for x in xs:
             r, c, v = x
             self.rows.append(r)
             self.cols.append(c)
             self.vals.append(v)
+
+            self._xtx[r, c] += v ** 2
+
+        self.refresh_norm()
 
         super().postprocess_data(xs)
 
@@ -344,6 +406,10 @@ class EntryTraceLinearOp(LinearOp, IncrementalData[entry_matrix]):
 
         return t
 
+    @property
+    def xtx(self) -> LinearOp:
+        return HadamardLinearOp(self._xtx)
+
     def norm(self) -> float:
         if not self.fresh:
             self.refresh_norm()
@@ -351,7 +417,7 @@ class EntryTraceLinearOp(LinearOp, IncrementalData[entry_matrix]):
         return self._norm
 
     def refresh_norm(self):
-        # TODO
+        self._norm = self._xtx.max() ** 0.5
         self.fresh = True
 
 
