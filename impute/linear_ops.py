@@ -142,7 +142,7 @@ class TransposeLinearOp(LinearOp):
         return self.adjoint.norm()
 
 
-X = TypeVar('X', vector, int)
+X = TypeVar('X')
 
 
 class IncrementalData(Generic[X]):
@@ -170,7 +170,7 @@ class IncrementalData(Generic[X]):
         pass
 
     def postprocess_data(self, xs: List[X]):
-        if not xs:
+        if xs:
             self.fresh = False
 
 
@@ -255,4 +255,104 @@ class DenseTraceLinearOp(LinearOp, IncrementalData[vector]):
         self._norm = npl.norm(xs, 2)
 
 
-MatrixLinearOp = Union[DenseTraceLinearOp]
+row_matrix = Tuple[int, vector]
+
+
+class RowTraceLinearOp(LinearOp, IncrementalData[row_matrix]):
+
+    def __init__(self, i_shape: Tuple[int, int]):
+        super().__init__()
+
+        self._i_shape = i_shape
+
+        self._norm = 0
+
+        self.row_ops: List[DotLinearOp] = [DotLinearOp(i_shape[1]) for _ in range(i_shape[0])]
+
+    def postprocess_data(self, xs: List[row_matrix]):
+        for x in xs:
+            r, v = x
+            self.row_ops[r].add(v)
+
+        super().postprocess_data(xs)
+
+    @property
+    def i_shape(self):
+        return self._i_shape
+
+    @property
+    def o_shape(self):
+        return tuple([len(self.xs)])
+
+    def evaluate(self, b: vector) -> vector:
+        return np.vstack([op.evaluate(b[r]) for r, op in enumerate(self.row_ops)])
+
+    def evaluate_t(self, b: vector) -> vector:
+        return sum(c * x for c, x in zip(b, self.xs))
+
+    def norm(self) -> float:
+        if not self.fresh:
+            self.refresh_norm()
+
+        return self._norm
+
+    def refresh_norm(self):
+        self._norm = max(op.norm() for op in self.row_ops)
+        self.fresh = True
+
+
+entry_matrix = Tuple[int, int, float]
+
+
+class EntryTraceLinearOp(LinearOp, IncrementalData[entry_matrix]):
+
+    def __init__(self, i_shape: Tuple[int, int]):
+        super().__init__()
+
+        self._i_shape = i_shape
+
+        self._norm = 0
+
+        self.rows: List[int] = []
+        self.cols: List[int] = []
+        self.vals: List[float] = []
+
+    def postprocess_data(self, xs: List[entry_matrix]):
+        for x in xs:
+            r, c, v = x
+            self.rows.append(r)
+            self.cols.append(c)
+            self.vals.append(v)
+
+        super().postprocess_data(xs)
+
+    @property
+    def i_shape(self):
+        return self._i_shape
+
+    @property
+    def o_shape(self):
+        return tuple([len(self.xs)])
+
+    def evaluate(self, b: vector) -> vector:
+        return np.multiply(b[self.rows, self.cols], self.vals)
+
+    def evaluate_t(self, b: vector) -> vector:
+        t = np.zeros(self.i_shape)
+
+        np.add.at(t, (self.rows, self.cols), np.multiply(self.vals, b))
+
+        return t
+
+    def norm(self) -> float:
+        if not self.fresh:
+            self.refresh_norm()
+
+        return self._norm
+
+    def refresh_norm(self):
+        # TODO
+        self.fresh = True
+
+
+TraceLinearOp = Union[DenseTraceLinearOp, RowTraceLinearOp, EntryTraceLinearOp]
