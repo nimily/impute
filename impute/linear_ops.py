@@ -19,7 +19,7 @@ class LinearOp(abc.ABC):
     LinearOpType = Type['LinearOp']
 
     def __init__(self, adjoint: Optional[Union['LinearOp', str]] = None, **kwargs):
-        super().__init__()
+        super().__init__(**kwargs)
 
         if adjoint == 'self':
             adjoint = self
@@ -138,7 +138,7 @@ class AdjointCompositeLinearOp(SelfAdjointOp, CompositeLinearOp):
         super().__init__(**kwargs)
 
     @property
-    def square(self) -> (SelfAdjointOp, CompositeLinearOp):
+    def square(self) -> 'AdjointCompositeLinearOp':
         return AdjointCompositeLinearOp(self)
 
     def norm(self) -> float:

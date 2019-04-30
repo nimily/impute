@@ -1,4 +1,4 @@
-from typing import Tuple, List, NamedTuple
+from typing import Tuple, List
 
 import numpy as np
 import numpy.random as npr
@@ -57,7 +57,7 @@ class TraceData:
     def __init__(self, shape):
         self.shape = shape
 
-        self.pos: List[Tuple[int, int]] = []
+        self.pos: List[Tuple[int, ...]] = []
         self.val: List[float] = []
         self.xs: List[np.ndarray] = []
 
@@ -77,7 +77,7 @@ def create_data(seed, shape, n_sample):
     npr.seed(seed)
 
     data = TraceData(shape)
-    for i in range(n_sample):
+    for _ in range(n_sample):
         p, v, x = random_one_hot(shape)
 
         data.pos.append(p)
@@ -127,28 +127,29 @@ def add_to_entry_op(op, data):
     (3, (25, 20), 400),
     (4, (100, 100), 100),
     (5, (100, 100), 100),
-])
-def data(request):
+], name='data')
+def test_data(request):
     yield create_data(*request.param)
 
 
 @pytest.fixture(params=[
     (DenseTraceLinearOp, add_to_dense_op),
-    # (RowTraceLinearOp, add_to_row_op),
+    (RowTraceLinearOp, add_to_row_op),
     (EntryTraceLinearOp, add_to_entry_op),
 ], ids=[
     'dense',
-    # 'row',
+    'row',
     'entry',
-])
-def op_info(request):
+], name='op_info')
+def test_op_info(request):
     yield request.param
 
 
 @pytest.mark.usefixtures('op_info', 'data')
 class TestTraceLinearOp:
 
-    def test_evaluate(self, op_info, data):
+    @staticmethod
+    def test_evaluate(op_info, data):
         op = TestTraceLinearOp.get_loaded_op(op_info, data)
 
         actual = op.evaluate(data.b)
@@ -156,7 +157,8 @@ class TestTraceLinearOp:
 
         npt.assert_array_almost_equal(actual, expect)
 
-    def test_evaluate_t(self, op_info, data):
+    @staticmethod
+    def test_evaluate_t(op_info, data):
         op = TestTraceLinearOp.get_loaded_op(op_info, data)
 
         actual = op.evaluate_t(data.bt)
@@ -164,7 +166,8 @@ class TestTraceLinearOp:
 
         npt.assert_array_almost_equal(actual, expect)
 
-    def test_xtx(self, op_info, data):
+    @staticmethod
+    def test_xtx(op_info, data):
         op = TestTraceLinearOp.get_loaded_op(op_info, data)
 
         actual = op.xtx(data.b)
@@ -172,7 +175,8 @@ class TestTraceLinearOp:
 
         npt.assert_array_almost_equal(actual, expect)
 
-    def test_xxt(self, op_info, data):
+    @staticmethod
+    def test_xxt(op_info, data):
         op = TestTraceLinearOp.get_loaded_op(op_info, data)
 
         actual = op.xxt(data.bt)
@@ -180,7 +184,8 @@ class TestTraceLinearOp:
 
         npt.assert_array_almost_equal(actual, expect)
 
-    def test_norm(self, op_info, data):
+    @staticmethod
+    def test_norm(op_info, data):
         op = TestTraceLinearOp.get_loaded_op(op_info, data)
 
         actual = op.norm()
