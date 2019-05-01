@@ -18,8 +18,8 @@ class LinearOp(abc.ABC):
 
     LinearOpType = Type['LinearOp']
 
+    # pylint: disable=W0613
     def __init__(self, adjoint: Optional[Union['LinearOp', str]] = None, **kwargs):
-        super().__init__(**kwargs)
 
         if adjoint == 'self':
             adjoint = self
@@ -334,7 +334,7 @@ class RowTraceLinearOp(LinearOp, IncrementalData[row_matrix]):
         n_row, n_col = i_shape
 
         self.row_ops: List[DotLinearOp] = [DotLinearOp(n_col) for _ in range(n_row)]
-        self.row_to_global = [[] for _ in range(n_row)]
+        self.row_to_global: List[List[int]] = [[] for _ in range(n_row)]
 
     def postprocess_data(self, xs: List[row_matrix]):
         start = len(self.xs) - len(xs)
