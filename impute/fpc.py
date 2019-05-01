@@ -5,9 +5,7 @@ from collections import namedtuple
 import numpy as np
 import numpy.linalg as npl
 
-from .base import LagrangianImpute
-from .sample_set import SampleSet
-from .measurement import Measurement
+from . import vector, LagrangianImpute, Dataset
 from .utils import soft_svt, SVD
 
 DEFAULT_XTOL = 1e-3
@@ -29,7 +27,7 @@ class FpcImpute(LagrangianImpute):
         self.dtol: float = DEFAULT_DTOL
 
     def update_once(self,
-                    ss: SampleSet,
+                    ds: Dataset,
                     alpha: float) -> FpcMetrics:
         tau = self.tau
 
@@ -37,7 +35,7 @@ class FpcImpute(LagrangianImpute):
         z_old = self.z_new
         m_old = z_old.to_matrix()
 
-        g_old = ss.rss_grad(m_old)
+        g_old = ds.rss_grad(m_old)
         y_new = m_old - tau * g_old
         z_new = soft_svt(y_new, tau * alpha)
         m_new = z_new.to_matrix()
@@ -52,7 +50,7 @@ class FpcImpute(LagrangianImpute):
                 u = z_new.u
                 v = z_new.v
 
-                z_new = FpcImpute.debias(ss, u, v)
+                z_new = FpcImpute.debias(ds, u, v)
                 m_new = z_new.to_matrix()
                 d_norm = npl.norm(m_new - m_old)
 
@@ -71,18 +69,16 @@ class FpcImpute(LagrangianImpute):
         )
 
     @staticmethod
-    def debias(ss: SampleSet, u, v) -> SVD:
+    def debias(ds: Dataset, u: vector, v: vector) -> SVD:
 
-        def transform(x: Measurement):
-            m = x.as_matrix(u.T, v.T)
+        def transform_xs():
+            uxvs = ds.op.to_matrix_list(u.T, v.T)
+            uxvs = [x.diagonal() if np.ndim(x) == 2 else x for x in uxvs]
 
-            if np.ndim(m) == 2:
-                return m.diagonal()
+            return np.array(uxvs)
 
-            return [m]
-
-        xs = np.array([transform(x) for x in ss.xs])
-        ys = ss.ys
+        xs = transform_xs()
+        ys = ds.ys
 
         s, *_ = npl.lstsq(xs, ys, rcond=None)
 
@@ -103,7 +99,7 @@ class FpcImpute(LagrangianImpute):
         return False
 
     def _prefit(self,
-                ss: SampleSet,
+                ds: Dataset,
                 alphas: List[float],
                 max_iters: int = 100,
                 warm_start: bool = True,
@@ -112,7 +108,7 @@ class FpcImpute(LagrangianImpute):
         if 'tau' in kwargs:
             self.tau = kwargs['tau']
         else:
-            self.tau = 1 / ss.op_norm() ** 2
+            self.tau = 1 / ds.op.norm() ** 2
 
         if 'xtol' in kwargs:
             assert isinstance(kwargs['xtol'], float)

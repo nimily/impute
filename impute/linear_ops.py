@@ -1,10 +1,12 @@
 import abc
 
-from typing import Tuple, List, Union, Optional, Type, TypeVar, Generic
+from typing import Tuple, List, Union, Optional, Type, TypeVar, Generic, Iterator
 from functools import reduce
 
 import numpy as np
 import numpy.linalg as npl
+
+from .utils import one_hot
 
 
 vector = Union[np.ndarray]
@@ -18,8 +20,8 @@ class LinearOp(abc.ABC):
 
     LinearOpType = Type['LinearOp']
 
-    # pylint: disable=W0613
     def __init__(self, adjoint: Optional[Union['LinearOp', str]] = None, **kwargs):
+        super().__init__(**kwargs)
 
         if adjoint == 'self':
             adjoint = self
@@ -218,10 +220,10 @@ class IncrementalData(Generic[X]):
     def i_shape(self):
         pass
 
-    def add(self, x: X):
-        self.add_all([x])
+    def append(self, x: X):
+        self.extend([x])
 
-    def add_all(self, xs: List[X]):
+    def extend(self, xs: List[X]):
         self.preprocess_data(xs)
 
         self.xs.extend(xs)
@@ -234,6 +236,24 @@ class IncrementalData(Generic[X]):
     def postprocess_data(self, xs: List[X]):
         if xs:
             self.fresh = False
+
+    def to_matrix_list(self,
+                       left: Optional[vector] = None,
+                       right: Optional[vector] = None) -> Iterator[vector]:
+        return map(lambda x: self.to_matrix(x, left, right), self.xs)
+
+    def to_matrix(self, x: X,
+                  left: Optional[vector] = None,
+                  right: Optional[vector] = None) -> vector:
+        assert isinstance(x, np.ndarray)
+
+        if left is not None:
+            x = x @ left
+
+        if right is not None:
+            x = x @ right
+
+        return x
 
 
 class DotLinearOp(LinearOp, IncrementalData[vector]):
@@ -341,7 +361,7 @@ class RowTraceLinearOp(LinearOp, IncrementalData[row_matrix]):
 
         for i, x in enumerate(xs):
             r, v = x
-            self.row_ops[r].add(v)
+            self.row_ops[r].append(v)
             self.row_to_global[r].append(start + i)
 
         super().postprocess_data(xs)
@@ -387,6 +407,20 @@ class RowTraceLinearOp(LinearOp, IncrementalData[row_matrix]):
     def refresh_norm(self):
         self._norm = max(op.norm() for op in self.row_ops)
         self.fresh = True
+
+    def to_matrix(self, x: row_matrix,
+                  left: Optional[vector] = None,
+                  right: Optional[vector] = None) -> vector:
+        r, v = x
+        m = np.outer(one_hot(self.n_row, r), v)
+
+        if left is not None:
+            m = left @ m
+
+        if right is not None:
+            m = m @ right
+
+        return m
 
 
 class EntryTraceLinearOp(LinearOp, IncrementalData[entry_matrix]):
@@ -448,6 +482,20 @@ class EntryTraceLinearOp(LinearOp, IncrementalData[entry_matrix]):
     def refresh_norm(self):
         self._norm = self._xtx.max() ** 0.5
         self.fresh = True
+
+    def to_matrix(self, x: entry_matrix,
+                  left: Optional[vector] = None,
+                  right: Optional[vector] = None) -> vector:
+        i, j, v = x
+        m = one_hot(self.i_shape, (i, j), v)
+
+        if left is not None:
+            m = left @ m
+
+        if right is not None:
+            m = m @ right
+
+        return m
 
 
 TraceLinearOp = Union[DenseTraceLinearOp, RowTraceLinearOp, EntryTraceLinearOp]
