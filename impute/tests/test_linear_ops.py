@@ -24,7 +24,7 @@ def create_dot_op(shape, n_sample):
     op = DotLinearOp(shape)
 
     entries = [random_one_hot(shape) for _ in range(n_sample)]
-    op.add_all([x for _, _, x in entries])
+    op.extend([x for _, _, x in entries])
 
     return op, entries
 
@@ -106,17 +106,17 @@ def create_data(seed, shape, n_sample):
 
 
 def add_to_dense_op(op, data):
-    op.add_all(data.xs)
+    op.extend(data.xs)
 
 
 def add_to_row_op(op, data):
-    op.add_all([
+    op.extend([
         (r, one_hot(data.shape[1], c, v)) for (r, c), v in zip(data.pos, data.val)
     ])
 
 
 def add_to_entry_op(op, data):
-    op.add_all([
+    op.extend([
         (r, c, v) for (r, c), v in zip(data.pos, data.val)
     ])
 
@@ -128,7 +128,7 @@ def add_to_entry_op(op, data):
     (4, (100, 100), 100),
     (5, (100, 100), 100),
 ], name='data')
-def test_data(request):
+def data_fixture(request):
     yield create_data(*request.param)
 
 
@@ -141,7 +141,7 @@ def test_data(request):
     'row',
     'entry',
 ], name='op_info')
-def test_op_info(request):
+def op_info_fixture(request):
     yield request.param
 
 

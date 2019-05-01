@@ -1,12 +1,34 @@
 import abc
 
-from typing import Optional, List, Tuple, Any
+from typing import Optional, List, Tuple, Any, Union
 
 import numpy as np
 import numpy.linalg as npl
 
-from .sample_set import SampleSet
+from .linear_ops import TraceLinearOp, vector
 from .utils import SVD
+
+
+class Dataset:
+    op: TraceLinearOp
+    ys: Union[vector, List[float]]
+    aty: Optional[vector] = None
+
+    def __init__(self,
+                 op: TraceLinearOp,
+                 ys: Union[vector, List[float]],
+                 ay: Optional[vector] = None):
+        self.op: TraceLinearOp = op
+        self.ys: Union[vector, List[float]] = ys
+        self.ay: Optional[vector] = ay
+
+    def rss_grad(self, b: vector) -> vector:
+        self.ay = self.op.t(self.ys)
+        return self.op.xtx(b) - self.ay
+
+    @property
+    def xs(self):
+        return self.op.to_matrix_list()
 
 
 class BaseImpute:
@@ -39,7 +61,7 @@ class BaseImpute:
         return np.zeros(self.shape)
 
     @abc.abstractmethod
-    def impute(self, ss: SampleSet, **kwargs) -> SVD:
+    def impute(self, ds: Dataset, **kwargs) -> SVD:
         pass
 
 
@@ -47,7 +69,7 @@ class LagrangianImpute(BaseImpute):
 
     @abc.abstractmethod
     def update_once(self,
-                    ss: SampleSet,
+                    ds: Dataset,
                     alpha: float) -> Any:
         pass
 
@@ -56,7 +78,7 @@ class LagrangianImpute(BaseImpute):
         pass
 
     def _prefit(self,
-                ss: SampleSet,
+                ds: Dataset,
                 alphas: List[float],
                 max_iters: int = 100,
                 warm_start: bool = True,
@@ -64,13 +86,13 @@ class LagrangianImpute(BaseImpute):
         pass
 
     def fit(self,
-            ss: SampleSet,
+            ds: Dataset,
             alphas: List[float],
             max_iters: int = 100,
             warm_start: bool = True,
             **kwargs) -> List[SVD]:
 
-        self._prefit(ss, alphas, max_iters, warm_start, **kwargs)
+        self._prefit(ds, alphas, max_iters, warm_start, **kwargs)
 
         if not warm_start:
             self._init_z()
@@ -79,7 +101,7 @@ class LagrangianImpute(BaseImpute):
 
         for alpha in alphas:
             for _ in range(max_iters):
-                metrics = self.update_once(ss, alpha)
+                metrics = self.update_once(ds, alpha)
 
                 if self.should_stop(metrics):
                     break
@@ -89,7 +111,7 @@ class LagrangianImpute(BaseImpute):
 
         return zs
 
-    def impute(self, ss: SampleSet, **kwargs) -> SVD:
+    def impute(self, ds: Dataset, **kwargs) -> SVD:
         assert 'alpha' in kwargs
         alpha_min = kwargs['alpha']
 
@@ -99,19 +121,19 @@ class LagrangianImpute(BaseImpute):
         else:
             eta = 0.25
 
-        alphas = self.get_alpha_seq(ss, alpha_min, eta)
+        alphas = self.get_alpha_seq(ds, alpha_min, eta)
 
-        return self.fit(ss, alphas, **kwargs)[-1]
+        return self.fit(ds, alphas, **kwargs)[-1]
 
-    def alpha_max(self, ss: SampleSet) -> float:
-        grad = ss.rss_grad(self.zero())
+    def alpha_max(self, ds: Dataset) -> float:
+        grad = ds.rss_grad(self.zero())
 
         return npl.norm(grad, 2)
 
-    def get_alpha_seq(self, ss: SampleSet, alpha_min: float, eta: float) -> List[float]:
+    def get_alpha_seq(self, ds: Dataset, alpha_min: float, eta: float) -> List[float]:
         alphas = []
 
-        alpha = self.alpha_max(ss)
+        alpha = self.alpha_max(ds)
         while alpha > alpha_min:
             alphas.append(alpha)
 
