@@ -5,7 +5,7 @@ from collections import namedtuple
 import numpy as np
 import numpy.linalg as npl
 
-from . import vector, LagrangianImpute, Dataset
+from .base import vector, LagrangianImpute, Dataset
 from .utils import soft_svt, SVD
 
 DEFAULT_XTOL = 1e-3

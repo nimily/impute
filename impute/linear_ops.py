@@ -16,13 +16,11 @@ row_matrix = Tuple[int, vector]
 entry_matrix = Tuple[int, int, float]
 
 
-class LinearOp(abc.ABC):
+class LinearOp:
 
     LinearOpType = Type['LinearOp']
 
     def __init__(self, adjoint: Optional[Union['LinearOp', str]] = None, **kwargs):
-        super().__init__(**kwargs)
-
         if adjoint == 'self':
             adjoint = self
 
@@ -211,7 +209,8 @@ X = TypeVar('X')
 
 class IncrementalData(Generic[X]):
 
-    def __init__(self):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.xs: List[X] = []
         self.fresh: bool = False
 
@@ -256,7 +255,7 @@ class IncrementalData(Generic[X]):
         return x
 
 
-class DotLinearOp(LinearOp, IncrementalData[vector]):
+class DotLinearOp(IncrementalData[vector], LinearOp):
 
     def __init__(self, i_shape: Union[int, Tuple[int]]):
         super().__init__()
@@ -307,7 +306,7 @@ class DotLinearOp(LinearOp, IncrementalData[vector]):
         self.fresh = True
 
 
-class DenseTraceLinearOp(LinearOp, IncrementalData[vector]):
+class DenseTraceLinearOp(IncrementalData[vector], LinearOp):
 
     def __init__(self, i_shape: Tuple[int, int]):
         super().__init__()
@@ -342,7 +341,7 @@ class DenseTraceLinearOp(LinearOp, IncrementalData[vector]):
         self._norm = npl.norm(xs, 2)
 
 
-class RowTraceLinearOp(LinearOp, IncrementalData[row_matrix]):
+class RowTraceLinearOp(IncrementalData[row_matrix], LinearOp):
 
     def __init__(self, i_shape: Tuple[int, int]):
         super().__init__()
@@ -411,7 +410,7 @@ class RowTraceLinearOp(LinearOp, IncrementalData[row_matrix]):
     def to_matrix(self, x: row_matrix,
                   left: Optional[vector] = None,
                   right: Optional[vector] = None) -> vector:
-        n_row, n_col = self.i_shape
+        n_row, _ = self.i_shape
 
         i, v = x
 
@@ -428,7 +427,7 @@ class RowTraceLinearOp(LinearOp, IncrementalData[row_matrix]):
         return np.outer(left, right)
 
 
-class EntryTraceLinearOp(LinearOp, IncrementalData[entry_matrix]):
+class EntryTraceLinearOp(IncrementalData[entry_matrix], LinearOp):
 
     def __init__(self, i_shape: Tuple[int, int]):
         super().__init__()

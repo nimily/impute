@@ -2,7 +2,8 @@ from typing import Tuple, Any, List
 
 import numpy.linalg as npl
 
-from . import LagrangianImpute, Dataset, EntryTraceLinearOp
+from .base import LagrangianImpute, Dataset
+from .linear_ops import EntryTraceLinearOp
 from .utils import SVD, soft_svt
 
 DEFAULT_TOL = 1e-5
