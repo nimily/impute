@@ -277,8 +277,13 @@ class DotLinearOp(LinearOp, IncrementalData[vector]):
             self.refresh()
 
     def refresh(self):
-        self.matrix = np.array(self.xs)
-        self._norm = npl.norm(self.matrix, 2)
+        if self.xs:
+            self.matrix = np.vstack(self.xs)
+            self._norm = npl.norm(self.matrix, 2)
+        else:
+            self.matrix = np.empty((0, self.i_shape[0]))
+            self._norm = 0.0
+
         self.fresh = True
 
 
@@ -326,12 +331,18 @@ class RowTraceLinearOp(LinearOp, IncrementalData[row_matrix]):
 
         self._norm = 0
 
-        self.row_ops: List[DotLinearOp] = [DotLinearOp(i_shape[1]) for _ in range(i_shape[0])]
+        n_row, n_col = i_shape
+
+        self.row_ops: List[DotLinearOp] = [DotLinearOp(n_col) for _ in range(n_row)]
+        self.row_to_global = [[] for _ in range(n_row)]
 
     def postprocess_data(self, xs: List[row_matrix]):
-        for x in xs:
+        start = len(self.xs) - len(xs)
+
+        for i, x in enumerate(xs):
             r, v = x
             self.row_ops[r].add(v)
+            self.row_to_global[r].append(start + i)
 
         super().postprocess_data(xs)
 
@@ -340,14 +351,32 @@ class RowTraceLinearOp(LinearOp, IncrementalData[row_matrix]):
         return self._i_shape
 
     @property
+    def n_row(self):
+        return self.i_shape[0]
+
+    @property
+    def n_col(self):
+        return self.i_shape[1]
+
+    @property
     def o_shape(self):
         return tuple([len(self.xs)])
 
     def evaluate(self, b: vector) -> vector:
-        return np.vstack([op.evaluate(b[r]) for r, op in enumerate(self.row_ops)])
+        per_rows = [op(b[r]) for r, op in enumerate(self.row_ops)]
+
+        y = np.zeros(self.o_shape)
+        for i, row in enumerate(per_rows):
+            indices = self.row_to_global[i]
+            y[indices] = row
+
+        return y
 
     def evaluate_t(self, b: vector) -> vector:
-        return sum(c * x for c, x in zip(b, self.xs))
+        row_ops = self.row_ops
+        row_vecs = [b[indices] for indices in self.row_to_global]
+
+        return np.vstack([op.t(vec) for vec, op in zip(row_vecs, row_ops)])
 
     def norm(self) -> float:
         if not self.fresh:

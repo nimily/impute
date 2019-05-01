@@ -111,7 +111,7 @@ def add_to_dense_op(op, data):
 
 def add_to_row_op(op, data):
     op.add_all([
-        (r, one_hot(data.shape, c, v)) for (r, c), v in zip(data.pos, data.val)
+        (r, one_hot(data.shape[1], c, v)) for (r, c), v in zip(data.pos, data.val)
     ])
 
 
