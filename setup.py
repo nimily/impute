@@ -1,9 +1,9 @@
 from setuptools import setup
 
-setup(name='soft-impute',
+setup(name='lr-impute',
       version='0.1',
-      description='Implementation of soft-impute for general sampling distributions',
-      url='git@github.com:nimily/general-soft-impute.git',
+      description='Implementation of low-rank imputing methods for general sampling distributions',
+      url='git@github.com:nimily/low-rank-impute.git',
       author='Nima Hamidi',
       author_email='nimaa.hamidi@gmail.com',
       license='MIT',
