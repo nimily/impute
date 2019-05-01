@@ -19,7 +19,7 @@ class Dataset:
                  ys: Union[vector, List[float]],
                  ay: Optional[vector] = None):
         self.op: TraceLinearOp = op
-        self.ys: Union[vector, List[float]] = ys
+        self.ys: vector = ys if isinstance(ys, np.ndarray) else np.array(ys)
         self.ay: Optional[vector] = ay
 
     def rss_grad(self, b: vector) -> vector:
