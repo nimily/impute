@@ -10,7 +10,7 @@ find the implementation of the following algorithms:
  As this package is not published in PyPI, you need to install directly from the Github
  repo. The following command installs the most recent version of the package:
  ```shell
-pip install -e git+ssh://git@github.com/nimily/low-rank-impute.git@master#egg=impute
+pip install git+ssh://git@github.com/nimily/low-rank-impute.git@master#egg=impute
 ```  
 
 ## Usage
