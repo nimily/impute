@@ -411,16 +411,21 @@ class RowTraceLinearOp(LinearOp, IncrementalData[row_matrix]):
     def to_matrix(self, x: row_matrix,
                   left: Optional[vector] = None,
                   right: Optional[vector] = None) -> vector:
-        r, v = x
-        m = np.outer(one_hot(self.n_row, r), v)
+        n_row, n_col = self.i_shape
 
-        if left is not None:
-            m = left @ m
+        i, v = x
 
-        if right is not None:
-            m = m @ right
+        if left is None:
+            left = one_hot(n_row, i)
+        else:
+            left = left[:, i]
 
-        return m
+        if right is None:
+            right = v
+        else:
+            right = v @ right
+
+        return np.outer(left, right)
 
 
 class EntryTraceLinearOp(LinearOp, IncrementalData[entry_matrix]):
@@ -486,16 +491,22 @@ class EntryTraceLinearOp(LinearOp, IncrementalData[entry_matrix]):
     def to_matrix(self, x: entry_matrix,
                   left: Optional[vector] = None,
                   right: Optional[vector] = None) -> vector:
+
+        n_row, n_col = self.i_shape
+
         i, j, v = x
-        m = one_hot(self.i_shape, (i, j), v)
 
-        if left is not None:
-            m = left @ m
+        if left is None:
+            left = one_hot(n_row, i)
+        else:
+            left = left[:, i]
 
-        if right is not None:
-            m = m @ right
+        if right is None:
+            right = one_hot(n_col, j, v)
+        else:
+            right = right[j, :] * v
 
-        return m
+        return np.outer(left, right)
 
 
 TraceLinearOp = Union[DenseTraceLinearOp, RowTraceLinearOp, EntryTraceLinearOp]
