@@ -332,11 +332,11 @@ class DenseTraceLinearOp(LinearOp, IncrementalData[vector]):
 
     def norm(self) -> float:
         if not self.fresh:
-            self.refresh_norm()
+            self.refresh()
 
         return self._norm
 
-    def refresh_norm(self):
+    def refresh(self):
         xs = np.array([x.flatten() for x in self.xs])
 
         self._norm = npl.norm(xs, 2)
@@ -400,11 +400,11 @@ class RowTraceLinearOp(LinearOp, IncrementalData[row_matrix]):
 
     def norm(self) -> float:
         if not self.fresh:
-            self.refresh_norm()
+            self.refresh()
 
         return self._norm
 
-    def refresh_norm(self):
+    def refresh(self):
         self._norm = max(op.norm() for op in self.row_ops)
         self.fresh = True
 
@@ -452,8 +452,6 @@ class EntryTraceLinearOp(LinearOp, IncrementalData[entry_matrix]):
 
             self._xtx[r, c] += v ** 2
 
-        self.refresh_norm()
-
         super().postprocess_data(xs)
 
     @property
@@ -480,11 +478,11 @@ class EntryTraceLinearOp(LinearOp, IncrementalData[entry_matrix]):
 
     def norm(self) -> float:
         if not self.fresh:
-            self.refresh_norm()
+            self.refresh()
 
         return self._norm
 
-    def refresh_norm(self):
+    def refresh(self):
         self._norm = self._xtx.max() ** 0.5
         self.fresh = True
 
