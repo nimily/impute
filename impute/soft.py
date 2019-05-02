@@ -6,7 +6,6 @@ from .base import LagrangianImpute, Dataset
 from .linear_ops import EntryTraceLinearOp
 from .decomp import SVD
 from .decomp import exact_soft_svt as soft_svt
-from .utils import soft_svt
 
 DEFAULT_TOL = 1e-5
 

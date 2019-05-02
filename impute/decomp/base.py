@@ -34,4 +34,3 @@ def soft_thresh(level):
 
 def hard_thresh(level):
     return np.vectorize(lambda x: 0 if x < level else x)
-
