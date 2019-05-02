@@ -1,13 +1,17 @@
+from typing import NamedTuple
+
 import numpy as np
 import numpy.linalg as npl
 
 
-class SVD:
+class SVD(NamedTuple):
+    u: np.ndarray
+    s: np.ndarray
+    v: np.ndarray
 
-    def __init__(self, u: np.ndarray, s: np.ndarray, v: np.ndarray):
-        self.u = u
-        self.s = s
-        self.v = v
+    @property
+    def t(self):
+        return SVD(self.v.T, self.s, self.u.T)
 
     @staticmethod
     def to_svd(w: np.ndarray) -> 'SVD':
@@ -18,8 +22,13 @@ class SVD:
     def to_matrix(self) -> np.ndarray:
         return self.u @ np.diag(self.s) @ self.v
 
-    def trim(self) -> 'SVD':
-        r = max(1, len(self.s[self.s > 0]))
+    def trim(self, r=None) -> 'SVD':
+        if r:
+            r = min(r, sum(self.s > 0))
+        else:
+            r = sum(self.s > 0)
+
+        r = max(r, 1)
 
         u = self.u[:, :r]
         s = self.s[:r]
