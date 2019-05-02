@@ -30,6 +30,12 @@ class Dataset:
     def xs(self):
         return self.op.to_matrix_list()
 
+    def extend(self, xs, ys):
+        self.op.extend(xs)
+
+        if isinstance(self.ys, np.ndarray):
+            self.ys = np.concatenate([self.ys, ys])
+
 
 def penalized_loss(ds: Dataset, b, alpha):
     ys = np.array(ds.ys)
