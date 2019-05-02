@@ -6,7 +6,7 @@ import numpy as np
 import numpy.linalg as npl
 
 from .linear_ops import TraceLinearOp, vector
-from .decomp import SVD
+from .decomposition import SVD
 
 
 class Dataset:
