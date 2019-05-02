@@ -5,6 +5,8 @@ import scipy.linalg as scl
 from sklearn.utils import check_random_state
 from sklearn.utils.extmath import svd_flip, safe_sparse_dot
 
+from .base import SVD
+
 
 def randomized_range_finder(A, size, n_iter,
                             power_iteration_normalizer='auto',

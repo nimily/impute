@@ -6,7 +6,8 @@ import numpy as np
 import numpy.linalg as npl
 
 from .base import vector, LagrangianImpute, Dataset
-from .utils import soft_svt, SVD
+from .decomp import SVD
+from .decomp import exact_soft_svt as soft_svt
 
 DEFAULT_XTOL = 1e-3
 DEFAULT_GTOL = 0.0
