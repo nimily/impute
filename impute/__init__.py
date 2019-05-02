@@ -1,3 +1,5 @@
+from .version import version as __version__
+
 from .linear_ops import vector
 
 from .base import Dataset
