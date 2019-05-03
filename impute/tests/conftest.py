@@ -174,10 +174,20 @@ def alpha_ratio_fixture(request):
 
 
 @pytest.fixture(
-    params=[FpcImpute, SoftImpute],
-    name='imputer_cls'
+    params=[
+        (FpcImpute, 'exact'),
+        (SoftImpute, 'exact'),
+        (FpcImpute, 'randomized'),
+        (SoftImpute, 'randomized')],
+    ids=[
+        'fpc-exact',
+        'soft-exact',
+        'fpc-random',
+        'soft-random',
+    ],
+    name='imputer_info'
 )
-def imputer_cls_fixture(request):
+def imputer_info_fixture(request):
     return request.param
 
 

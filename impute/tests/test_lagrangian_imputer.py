@@ -5,17 +5,24 @@ import numpy.testing as npt
 import pytest
 
 from impute import penalized_loss as loss
+from impute.svt import tuned_svt
 
 
-@pytest.mark.usefixtures('imputer_cls', 'rae_case', 'alpha_ratio')
-class TestFpc:
+def create_imputer(imputer_info, shape):
+    imputer_cls, svd = imputer_info
+
+    return imputer_cls(shape, svt_op=tuned_svt(svd=svd))
+
+
+@pytest.mark.usefixtures('imputer_info', 'rae_case', 'alpha_ratio')
+class TestLagrangianImputer:
 
     @staticmethod
-    def test_alpha_max(imputer_cls, rae_case):
+    def test_alpha_max(imputer_info, rae_case):
         b, ds = rae_case
         shape = b.shape
 
-        imputer = imputer_cls(shape)
+        imputer = create_imputer(imputer_info, shape)
         alpha = imputer.alpha_max(ds)
 
         zs = imputer.fit(ds, [alpha, alpha * 0.999])
@@ -28,11 +35,11 @@ class TestFpc:
         assert actual > 1e-5
 
     @staticmethod
-    def test_strong_optimality(imputer_cls, rae_case, alpha_ratio):
+    def test_strong_optimality(imputer_info, rae_case, alpha_ratio):
         b, ds = rae_case
         shape = b.shape
 
-        imputer = imputer_cls(shape)
+        imputer = create_imputer(imputer_info, shape)
         alpha = imputer.alpha_max(ds) * alpha_ratio
 
         z = imputer.impute(ds, alpha=alpha, xtol=1e-10)
@@ -56,11 +63,11 @@ class TestFpc:
         assert actual < expect
 
     @staticmethod
-    def test_weak_optimality(imputer_cls, rae_case, alpha_ratio):
+    def test_weak_optimality(imputer_info, rae_case, alpha_ratio):
         b, ds = rae_case
         shape = b.shape
 
-        imputer = imputer_cls(shape)
+        imputer = create_imputer(imputer_info, shape)
         alpha = imputer.alpha_max(ds) * alpha_ratio
 
         z = imputer.impute(ds, alpha=alpha, gtol=1e-3)
