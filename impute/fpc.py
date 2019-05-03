@@ -7,7 +7,7 @@ import numpy.linalg as npl
 
 from .base import vector, LagrangianImpute, Dataset
 from .decomposition import SVD
-from .decomposition import exact_soft_svt as soft_svt
+from .svt import svt
 
 DEFAULT_XTOL = 1e-3
 DEFAULT_GTOL = 0.0
@@ -38,7 +38,7 @@ class FpcImpute(LagrangianImpute):
 
         g_old = ds.rss_grad(m_old)
         y_new = m_old - tau * g_old
-        z_new = soft_svt(y_new, tau * alpha)
+        z_new = svt(y_new, tau * alpha)
         m_new = z_new.to_matrix()
 
         d_norm = npl.norm(m_new - m_old)

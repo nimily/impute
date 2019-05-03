@@ -5,7 +5,7 @@ from math import ceil
 import numpy as np
 import numpy.random as npr
 
-from numpy.linalg import eigh, norm
+from numpy.linalg import eigh
 from scipy.linalg import qr, polar
 
 from sklearn.utils.extmath import svd_flip

@@ -51,4 +51,4 @@ class TestRandomizedSvd:
         if r > 3:
             tol = ed[3] + 1e-5
             au, ad, av = randomized_svd(b, tol=tol, max_rank=r)
-            npt.assert_array_almost_equal(ad, ed[:3])
+            npt.assert_array_almost_equal(ad, ed[:3], decimal=3)

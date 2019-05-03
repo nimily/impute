@@ -5,14 +5,14 @@ import numpy.linalg as npl
 from .base import LagrangianImpute, Dataset
 from .linear_ops import EntryTraceLinearOp
 from .decomposition import SVD
-from .decomposition import exact_soft_svt as soft_svt
+from .svt import svt
 
 DEFAULT_TOL = 1e-5
 
 
 class SoftImpute(LagrangianImpute):
 
-    def __init__(self, shape, svt_op=soft_svt):
+    def __init__(self, shape, svt_op=svt):
         super().__init__(shape)
 
         self.tol = 0
