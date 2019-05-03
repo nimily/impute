@@ -4,7 +4,8 @@ import numpy.linalg as npl
 
 from .base import LagrangianImpute, Dataset
 from .linear_ops import EntryTraceLinearOp
-from .utils import SVD, soft_svt
+from .decomposition import SVD
+from .decomposition import exact_soft_svt as soft_svt
 
 DEFAULT_TOL = 1e-5
 

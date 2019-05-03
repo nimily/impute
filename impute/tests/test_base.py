@@ -7,7 +7,8 @@ import pytest
 @pytest.mark.usefixtures('nae_case')
 class TestDataset:
 
-    def test_op(self, nae_case):
+    @staticmethod
+    def test_op(nae_case):
         b, ds = nae_case
 
         actual = ds.op(b)
@@ -15,7 +16,8 @@ class TestDataset:
 
         npt.assert_array_almost_equal(actual, expect)
 
-    def test_rss_grad(self, nae_case):
+    @staticmethod
+    def test_rss_grad(nae_case):
         b, ds = nae_case
 
         actual = ds.rss_grad(b)
