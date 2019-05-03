@@ -5,6 +5,7 @@ import numpy as np
 from .base import SVD
 from .decomposition import exact_svd, randomized_svd
 
+
 def soft_thresh(level):
     return np.vectorize(lambda x: 0 if x < level else x - level)
 
@@ -16,8 +17,8 @@ def hard_thresh(level):
 def svt(
         w: np.ndarray,
         level: float,
-        thresh: str = 'soft',
         rank: Optional[int] = None,
+        thresh: str = 'soft',
         svd: Union[Callable, str] = 'exact') -> SVD:
     if thresh == 'soft':
         thresh = soft_thresh(level)
@@ -36,3 +37,13 @@ def svt(
     u, s, v = svd(w, level, rank)
 
     return SVD(u, thresh(s), v).trim()
+
+
+def tuned_svt(thresh: str = 'soft',
+              svd: Union[Callable, str] = 'exact'):
+    def _svt(w: np.ndarray,
+             level: float,
+             rank: Optional[int] = None):
+        return svt(w, level, rank, thresh, svd)
+
+    return _svt

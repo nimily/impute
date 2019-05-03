@@ -110,7 +110,7 @@ def randomized_svd(
 
             u, s, v = randomized_expander(z, u, p, n_iter)
 
-            converged = min(s) < tol and u.shape[1] < n
+            converged = min(s) < tol / 2 or u.shape[1] >= n
 
         max_rank = min(max_rank, sum(s > tol))
 

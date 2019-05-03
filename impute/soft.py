@@ -5,10 +5,10 @@ import numpy.linalg as npl
 from .base import LagrangianImpute, Dataset
 from .linear_ops import EntryTraceLinearOp
 from .decomposition import SVD
-from .svt import svt
+from .svt import tuned_svt
 
 DEFAULT_TOL = 1e-5
-DEFAULT_SVT = svt
+DEFAULT_SVT = tuned_svt()
 
 
 class SoftImpute(LagrangianImpute):

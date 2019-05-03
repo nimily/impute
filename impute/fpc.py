@@ -7,18 +7,20 @@ import numpy.linalg as npl
 
 from .base import vector, LagrangianImpute, Dataset
 from .decomposition import SVD
-from .svt import svt
+from .svt import tuned_svt
 
 DEFAULT_XTOL = 1e-3
 DEFAULT_GTOL = 0.0
 DEFAULT_DTOL = inf
+
+DEFAULT_SVT = tuned_svt()
 
 FpcMetrics = namedtuple('Metric', 'd_norm o_norm opt_cond')
 
 
 class FpcImpute(LagrangianImpute):
 
-    def __init__(self, shape: Tuple[int, int]):
+    def __init__(self, shape: Tuple[int, int], svt_op=DEFAULT_SVT):
         super().__init__(shape)
 
         self.tau: float = 0.0
@@ -26,6 +28,8 @@ class FpcImpute(LagrangianImpute):
         self.xtol: float = DEFAULT_XTOL
         self.gtol: float = DEFAULT_GTOL
         self.dtol: float = DEFAULT_DTOL
+
+        self.svt_op = svt_op
 
     def update_once(self,
                     ds: Dataset,
@@ -38,7 +42,7 @@ class FpcImpute(LagrangianImpute):
 
         g_old = ds.rss_grad(m_old)
         y_new = m_old - tau * g_old
-        z_new = svt(y_new, tau * alpha)
+        z_new = self.svt_op(y_new, tau * alpha)
         m_new = z_new.to_matrix()
 
         d_norm = npl.norm(m_new - m_old)
