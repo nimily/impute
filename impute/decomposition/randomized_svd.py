@@ -109,15 +109,16 @@ def randomized_svd(
             r = sum(s >= tol)
 
             u, s, v = randomized_expander(z, u, p, n_iter)
+            print(f'step = svd({u.shape}, {s.shape}, {v.shape})')
 
-            converged = min(s) < tol / 2 or u.shape[1] >= n
+            converged = min(s) < tol / 3 or u.shape[1] >= n
 
         max_rank = min(max_rank, sum(s > tol))
 
     if max_rank == 0:
         u = np.ones((m, 1)) / m ** 0.5
         s = np.zeros((1, ))
-        v = np.ones((n, 1)) / n ** 0.5
+        v = np.ones((1, n)) / n ** 0.5
 
         max_rank = 1
 
