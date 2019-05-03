@@ -8,11 +8,12 @@ from .decomposition import SVD
 from .svt import svt
 
 DEFAULT_TOL = 1e-5
+DEFAULT_SVT = svt
 
 
 class SoftImpute(LagrangianImpute):
 
-    def __init__(self, shape, svt_op=svt):
+    def __init__(self, shape, svt_op=DEFAULT_SVT):
         super().__init__(shape)
 
         self.tol = 0
