@@ -3,8 +3,8 @@ from typing import Tuple, Optional
 import numpy as np
 import numpy.random as npr
 
-from numpy.linalg import eigh, qr
-from scipy.linalg import polar
+from numpy.linalg import eigh
+from scipy.linalg import qr, polar
 
 from sklearn.utils.extmath import svd_flip
 
@@ -29,7 +29,7 @@ def partial_orthogonalization(
 
     y -= q @ (q.T @ y)
 
-    y = qr(y)[0]
+    y = qr(y, mode='economic')[0]
 
     return y
 
@@ -53,10 +53,10 @@ def randomized_expander(
 
     for _ in range(n_iter):
         q = a @ (a.T @ q)
-        q = qr(q)[0]
+        q = qr(q, mode='economic')[0]
 
     # step B
-    h, c = qr(a.T @ q)
+    h, c = qr(a.T @ q, mode='economic')
     w, p = polar(c)
     v, d = sym_eig(p)
 
@@ -69,10 +69,14 @@ def randomized_svd(
         a: np.ndarray,
         tol: Optional[float] = None,
         rank: Optional[int] = None,
-        n_oversamples: Optional[int]=10,
+        n_oversamples: int = 10,
         n_iter='auto',
         transpose='auto') -> SVD:
     n_row, n_col = a.shape
+
+    if rank is None:
+        rank = min(n_row, n_col)
+
     max_cols = rank + n_oversamples
 
     if n_iter == 'auto':

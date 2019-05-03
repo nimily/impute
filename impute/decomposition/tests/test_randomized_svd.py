@@ -11,7 +11,7 @@ class TestRandomizedSvd:
 
     @staticmethod
     def test_fixed_rank(low_rank_matrix):
-        b, r, eu, ed, ev = low_rank_matrix
+        b, r, _, ed, _ = low_rank_matrix
 
         au, ad, av = randomized_svd(b, rank=r)
 

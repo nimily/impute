@@ -8,7 +8,6 @@ import numpy.linalg as npl
 
 from .utils import one_hot
 
-
 vector = Union[np.ndarray]
 
 full_matrix = vector
@@ -17,10 +16,9 @@ entry_matrix = Tuple[int, int, float]
 
 
 class LinearOp:
-
     LinearOpType = Type['LinearOp']
 
-    def __init__(self, adjoint: Optional[Union['LinearOp', str]] = None, **kwargs):
+    def __init__(self, adjoint: Optional[Union['LinearOp', str]] = None, **_):
         if adjoint == 'self':
             adjoint = self
 
@@ -241,9 +239,11 @@ class IncrementalData(Generic[X]):
                        right: Optional[vector] = None) -> Iterator[vector]:
         return map(lambda x: self.to_matrix(x, left, right), self.xs)
 
+    # pylint: disable=R0201
     def to_matrix(self, x: X,
                   left: Optional[vector] = None,
                   right: Optional[vector] = None) -> vector:
+
         assert isinstance(x, np.ndarray)
 
         if left is not None:
@@ -261,7 +261,7 @@ class DotLinearOp(IncrementalData[vector], LinearOp):
         super().__init__()
 
         if isinstance(i_shape, int):
-            i_shape = (i_shape, )
+            i_shape = (i_shape,)
 
         self._i_shape = i_shape
 

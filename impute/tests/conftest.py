@@ -5,7 +5,9 @@ import numpy.random as npr
 
 import pytest
 
-from impute import FpcImpute, SoftImpute, Dataset, DenseTraceLinearOp, RowTraceLinearOp, EntryTraceLinearOp, DotLinearOp
+from impute import Dataset
+from impute import FpcImpute, SoftImpute
+from impute import DotLinearOp, DenseTraceLinearOp, RowTraceLinearOp, EntryTraceLinearOp
 from impute.utils import random_one_hot, one_hot
 
 
@@ -35,15 +37,10 @@ def create_randomized_entry_dot_op(shape, n_sample):
     return op, entries
 
 
-def create_randomized_entry_dataset(shape, n_sample) -> Dataset:
-    pass
-
-
 # trace operator dataset
 class TraceLinearOpTestCase:
 
     # pylint: disable=too-many-instance-attributes
-
     def __init__(self, shape):
         self.shape = shape
 
@@ -117,7 +114,6 @@ def add_to_entry_op(op, data):
     (2, 100, 1000),
 ], name='re_dot_case')  # randomized alternating-entry dot-operator
 def re_dataset_fixture(request):
-
     seed = request.param[0]
     shape = request.param[1]
     n_sample = request.param[2]
@@ -132,7 +128,6 @@ def re_dataset_fixture(request):
     (2, (100, 80), 5),
 ], name='nae_case')  # noiseless alternating-entry dataset
 def nae_dataset_fixture(request):
-
     seed = request.param[0]
     shape = request.param[1]
     rank = request.param[2]
