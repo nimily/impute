@@ -1,43 +1,38 @@
 import numpy as np
+import numpy.linalg as npl
 import numpy.random as npr
 import numpy.testing as npt
 
-from impute.decomposition.randomized_svd import randomized_expander as expander
 from impute.decomposition.randomized_svd import randomized_svd as svd
-from sklearn.utils.extmath import randomized_svd as sk_svd
 
 
 def test():
     npr.seed(1)
 
-    n = 500
-    m = 400
-    r = 20
+    n = 1500
+    m = 1000
+    r = 10
 
-    bl = npr.randn(n, r)
-    br = npr.randn(m, r)
-    b = bl @ br.T
+    eu = npl.qr(npr.randn(n, r))[0]
+    ed = np.arange(r, 0, -1)
+    ev = npl.qr(npr.randn(m, r))[0]
+    b = eu @ np.diag(ed) @ ev.T
 
-    # q = np.zeros((n, 0))
-    # s = np.zeros((0,))
-    # q, s, v = expander(b, q, s)
+    au, ad, av = svd(b, rank=r)
 
-    # assert q.shape == (n, 10)
-    # assert s.shape == (10, )
-    #
-    # print(q.T @ q)
+    npt.assert_array_almost_equal(ad, ed)
 
-    u, actual_d, v = svd(b, rank=r)
-    _, expect_d, _ = sk_svd(b, r)
-
-    npt.assert_array_almost_equal(actual_d, expect_d)
-
-    actual = u.T @ u
+    actual = au.T @ au
     expect = np.eye(actual.shape[0])
 
     npt.assert_almost_equal(actual, expect)
 
-    actual = v @ v.T
+    actual = av @ av.T
     expect = np.eye(actual.shape[0])
 
     npt.assert_almost_equal(actual, expect)
+
+    actual = au @ np.diag(ad) @ av
+    expect = b
+
+    npt.assert_array_almost_equal(actual, expect)
