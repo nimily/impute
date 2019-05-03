@@ -15,10 +15,6 @@ def low_rank_matrix_fixture(request):
 
     npr.seed(seed)
 
-    n = 1500
-    m = 1000
-    r = 10
-
     u = npl.qr(npr.randn(n, r))[0]
     s = np.sort(npr.uniform(0, 1, r))[::-1]
     v = npl.qr(npr.randn(m, r))[0]

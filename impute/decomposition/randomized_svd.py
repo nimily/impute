@@ -1,9 +1,11 @@
 from typing import Tuple, Optional
 
+from math import ceil
+
 import numpy as np
 import numpy.random as npr
 
-from numpy.linalg import eigh
+from numpy.linalg import eigh, norm
 from scipy.linalg import qr, polar
 
 from sklearn.utils.extmath import svd_flip
@@ -35,71 +37,93 @@ def partial_orthogonalization(
 
 
 def randomized_expander(
-        a: np.ndarray,
+        z: np.ndarray,
         q: np.ndarray,
-        s: np.ndarray,
         n_col: int = 10,
         n_iter: int = 2) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     # step A
-    m = a.shape[1]
-    p = n_col
+    m = z.shape[1]
+    p = min(n_col, m - q.shape[1])
 
     w = npr.randn(m, p)
-    y = a @ w
+    y = z @ w
     del w
 
     qy = partial_orthogonalization(y, q, overwrite_y=True)
     q = np.append(q, qy, axis=1)
 
     for _ in range(n_iter):
-        q = a @ (a.T @ q)
+        q = z @ (z.T @ q)
         q = qr(q, mode='economic')[0]
 
     # step B
-    h, c = qr(a.T @ q, mode='economic')
+    h, c = qr(z.T @ q, mode='economic')
     w, p = polar(c)
     v, d = sym_eig(p)
 
-    s = np.append(s, d)
-
-    return q @ v, s, (h @ w @ v).T
+    return q @ v, d, (h @ w @ v).T
 
 
 def randomized_svd(
-        a: np.ndarray,
+        z: np.ndarray,
         tol: Optional[float] = None,
-        rank: Optional[int] = None,
+        max_rank: Optional[int] = None,
         n_oversamples: int = 10,
         n_iter='auto',
-        transpose='auto') -> SVD:
-    n_row, n_col = a.shape
+        a: int = 2,
+        rho: float = 0.05,
+        gamma: float = 0.1) -> SVD:
+    m, n = z.shape
 
-    if rank is None:
-        rank = min(n_row, n_col)
-
-    max_cols = rank + n_oversamples
-
-    if n_iter == 'auto':
-        n_iter = 7 if rank < .1 * min(a.shape) else 4
-
-    if transpose == 'auto':
-        transpose = n_row < n_col
+    transpose = m < n
 
     if transpose:
-        a = a.T
+        z = z.T
+        m, n = n, m
 
-    u = np.zeros((n_row, 0), dtype=np.float64)
-    s = np.zeros((0,), dtype=np.float64)
+    if max_rank is None:
+        max_rank = n
+
+    if n_iter == 'auto':
+        n_iter = 7 if max_rank < .1 * n else 4
+
+    u = np.zeros((m, 0), dtype=np.float64)
+    s = np.zeros((0, ), dtype=np.float64)
     v = None
-    if tol is None:
-        u, s, v = randomized_expander(a, u, s, max_cols, n_iter)
 
-    while u.shape[1] < max_cols:
-        u, s, v = randomized_expander(a, u, s, max_cols, n_iter)
+    if tol is None:
+        # fixed-rank case
+        n_col = max_rank + n_oversamples
+        u, s, v = randomized_expander(z, u, n_col, n_iter)
+
+    else:
+        # fixed-precision case
+        b = ceil(gamma * n)
+        r = 0
+        l = 0.1 * b
+
+        converged = False
+        while not converged:
+            p = a if r < l else ceil(rho * n)
+            l = min(r + p, b)
+            r = sum(s >= tol)
+
+            u, s, v = randomized_expander(z, u, p, n_iter)
+
+            converged = min(s) < tol and u.shape[1] < n
+
+        max_rank = min(max_rank, sum(s > tol))
+
+    if max_rank == 0:
+        u = np.ones((m, 1)) / m ** 0.5
+        s = np.zeros((1, ))
+        v = np.ones((n, 1)) / n ** 0.5
+
+        max_rank = 1
 
     u, v = svd_flip(u, v)
 
     if transpose:
         u, s, v = v.T, s, u.T
 
-    return SVD(u, s, v).trim(rank)
+    return SVD(u, s, v).trim(max_rank)

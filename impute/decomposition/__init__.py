@@ -5,3 +5,5 @@ from .base import hard_thresh
 from .exact_svd import exact_svd
 from .exact_svd import exact_soft_svt
 from .exact_svd import exact_hard_svt
+
+from .randomized_svd import randomized_svd
