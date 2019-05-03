@@ -8,21 +8,20 @@ from impute import penalized_loss as loss
 from impute.svt import tuned_svt
 
 
-def create_imputer(imputer_info, shape):
-    imputer_cls, svd = imputer_info
+def create_imputer(imputer_cls, svt, shape):
 
-    return imputer_cls(shape, svt_op=tuned_svt(svd=svd))
+    return imputer_cls(shape, svt_op=tuned_svt(svd=svt))
 
 
-@pytest.mark.usefixtures('imputer_info', 'rae_case', 'alpha_ratio')
+@pytest.mark.usefixtures('imputer_cls', 'svt', 'rae_case', 'alpha_ratio')
 class TestLagrangianImputer:
 
     @staticmethod
-    def test_alpha_max(imputer_info, rae_case):
+    def test_alpha_max(imputer_cls, svt, rae_case):
         b, ds = rae_case
         shape = b.shape
 
-        imputer = create_imputer(imputer_info, shape)
+        imputer = create_imputer(imputer_cls, svt, shape)
         alpha = imputer.alpha_max(ds)
 
         zs = imputer.fit(ds, [alpha, alpha * 0.999])
@@ -35,11 +34,11 @@ class TestLagrangianImputer:
         assert actual > 1e-5
 
     @staticmethod
-    def test_strong_optimality(imputer_info, rae_case, alpha_ratio):
+    def test_strong_optimality(imputer_cls, svt, rae_case, alpha_ratio):
         b, ds = rae_case
         shape = b.shape
 
-        imputer = create_imputer(imputer_info, shape)
+        imputer = create_imputer(imputer_cls, svt, shape)
         alpha = imputer.alpha_max(ds) * alpha_ratio
 
         z = imputer.impute(ds, alpha=alpha, xtol=1e-10)
@@ -63,11 +62,11 @@ class TestLagrangianImputer:
         assert actual < expect
 
     @staticmethod
-    def test_weak_optimality(imputer_info, rae_case, alpha_ratio):
+    def test_weak_optimality(imputer_cls, svt, rae_case, alpha_ratio):
         b, ds = rae_case
         shape = b.shape
 
-        imputer = create_imputer(imputer_info, shape)
+        imputer = create_imputer(imputer_cls, svt, shape)
         alpha = imputer.alpha_max(ds) * alpha_ratio
 
         z = imputer.impute(ds, alpha=alpha, gtol=1e-3)
