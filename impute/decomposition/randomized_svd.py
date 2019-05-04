@@ -109,8 +109,8 @@ def randomized_svd(
             r = sum(s >= tol)
 
             u, s, v = randomized_expander(z, u, p, n_iter)
-            print(f'step = svd({u.shape}, {s.shape}, {v.shape})')
 
+            # TODO consider other convergence conditions (the paper is not clear on this)
             converged = min(s) < tol / 3 or u.shape[1] >= n
 
         max_rank = min(max_rank, sum(s > tol))
