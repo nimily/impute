@@ -33,7 +33,7 @@ def svt(
         else:
             svd = exact_svd
 
-    assert callable(svd)
+    assert callable(thresh)
     u, s, v = svd(w, level, rank)
 
     return SVD(u, thresh(s), v).trim()

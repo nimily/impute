@@ -34,7 +34,9 @@ class TestLagrangianImputer:
         assert actual > 1e-5
 
     @staticmethod
-    def test_strong_optimality(imputer_cls, svt, rae_case, alpha_ratio):
+    def test_strong_optimality(imputer_cls, rae_case, alpha_ratio):
+        svt = 'exact'
+
         b, ds = rae_case
         shape = b.shape
 
