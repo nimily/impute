@@ -39,3 +39,10 @@ jobs:
                     name: running pylint
                     command: pytest impute
 
+workflows:
+    build_and_test:
+
+        jobs:
+
+            -   test:
+                    requires: build
