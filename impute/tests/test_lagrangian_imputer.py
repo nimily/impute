@@ -13,10 +13,11 @@ def create_imputer(imputer_cls, svt, shape):
     return imputer_cls(shape, svt_op=tuned_svt(svd=svt))
 
 
-@pytest.mark.usefixtures('imputer_cls', 'svt', 'rae_case', 'alpha_ratio')
+@pytest.mark.usefixtures('imputer_cls', 'rae_case', 'alpha_ratio')
 class TestLagrangianImputer:
 
     @staticmethod
+    @pytest.mark.usefixtures('svt')
     def test_alpha_max(imputer_cls, svt, rae_case):
         b, ds = rae_case
         shape = b.shape
@@ -64,6 +65,7 @@ class TestLagrangianImputer:
         assert actual < expect
 
     @staticmethod
+    @pytest.mark.usefixtures('svt')
     def test_weak_optimality(imputer_cls, svt, rae_case, alpha_ratio):
         b, ds = rae_case
         shape = b.shape
