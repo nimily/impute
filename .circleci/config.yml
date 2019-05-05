@@ -13,13 +13,12 @@ jobs:
             - checkout
 
             -   run:
-                    name: Install dependencies
+                    name: Create virtual environment
                     command: |
                         python3 -m venv venv
-                        . venv/bin/activate
 
             -   run:
-                    name: Build impute
+                    name: Install dependencies
                     command: |
                         . venv/bin/activate
                         pip3 install --progress-bar off --upgrade pip setuptools
@@ -44,15 +43,21 @@ jobs:
 
             -   run:
                     name: Running mypy
-                    command: python3 -m mypy impute
+                    command: |
+                        . venv/bin/activate
+                        python3 -m mypy impute
 
             -   run:
                     name: Running pylint
-                    command: python3 -m pylint impute
+                    command: |
+                        . venv/bin/activate
+                        python3 -m pylint impute
 
             -   run:
                     name: Running pylint
-                    command: python3 -m pytest impute
+                    command: |
+                        . venv/bin/activate
+                        python3 -m pytest impute
 
 workflows:
     version: 2
