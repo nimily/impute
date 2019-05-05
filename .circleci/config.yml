@@ -1,44 +1,58 @@
 version: 2.1
-jobs:
-    build:
+
+executors:
+    my-executor:
         docker:
             -   image: circleci/python:3.7.3
+
+jobs:
+    build:
+        executor: my-executor
 
         steps:
             - checkout
 
             -   run:
-                    name: install dependencies
+                    name: Install dependencies
                     command: |
                         python3 -m venv venv
                         . venv/bin/activate
 
             -   run:
-                    name: build impute
+                    name: Build impute
                     command: |
                         . venv/bin/activate
-                        pip install --upgrade pip setuptools
-                        pip install .
-                        pip install -r test_requirements.txt
+                        pip3 install --progress-bar off --upgrade pip setuptools
+                        pip3 install --progress-bar off .
+                        pip3 install --progress-bar off -r test_requirements.txt
+
+            -   persist_to_workspace:
+                    root: .
+                    paths:
+                        - .
 
     test:
-        docker:
-            -   image: circleci/python:3.7.3
+        executor: my-executor
 
         steps:
-            - checkout
+            -   attach_workspace:
+                    at: .
 
             -   run:
-                    name: running mypy
-                    command: python -m mypy impute
+                    name: Activate test environment
+                    command: . venv/bin/activate
 
             -   run:
-                    name: running pylint
-                    command: python -m pylint impute
+                    name: Running mypy
+                    command: python3 -m mypy impute
 
             -   run:
-                    name: running pylint
-                    command: python -m pytest impute
+                    name: Running pylint
+                    command: python3 -m pylint impute
+
+            -   run:
+                    name: Running pylint
+                    command: python3 -m pytest impute
 
 workflows:
     version: 2
