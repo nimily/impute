@@ -10,7 +10,7 @@ def write_version(filename='impute/version.py'):
 
 def setup_package():
     write_version()
-    
+
     setup(name='impute',
           version=VERSION,
           description='Implementation of low-rank imputing methods for general sampling distributions',
@@ -20,7 +20,8 @@ def setup_package():
           license='MIT',
           packages=['impute'],
           install_requires=['numpy >= 1.16.2',
-                            'scikit-learn >= 0.20.3'],
+                            'scikit-learn >= 0.20.3',
+                            'sklearn >= 0.0'],
           zip_safe=False)
 
 

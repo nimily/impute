@@ -19,6 +19,7 @@ jobs:
                         . venv/bin/activate
                         pip install --upgrade pip setuptools
                         pip install .
+                        pip install -r test_requirements.txt
 
     test:
         docker:
@@ -29,15 +30,15 @@ jobs:
 
             -   run:
                     name: running mypy
-                    command: mypy impute
+                    command: python -m mypy impute
 
             -   run:
                     name: running pylint
-                    command: pylint impute
+                    command: python -m pylint impute
 
             -   run:
                     name: running pylint
-                    command: pytest impute
+                    command: python -m pytest impute
 
 workflows:
     version: 2
