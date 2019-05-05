@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 VERSION = '0.1'
 
@@ -18,7 +18,7 @@ def setup_package():
           author='Nima Hamidi',
           author_email='nimaa.hamidi@gmail.com',
           license='MIT',
-          packages=['impute'],
+          packages=find_packages(),
           install_requires=['numpy >= 1.16.2',
                             'scikit-learn >= 0.20.3',
                             'sklearn >= 0.0'],
