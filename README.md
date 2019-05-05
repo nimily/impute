@@ -1,4 +1,5 @@
 # Impute
+[![CircleCI](https://circleci.com/gh/nimily/impute.svg?style=svg)](https://circleci.com/gh/nimily/impute)
 
 ## Introduction
 *Impute* implements a couple of known low-rank matrix imputing methods. Namely, you can
