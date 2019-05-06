@@ -6,7 +6,7 @@ import numpy as np
 import numpy.linalg as npl
 
 from .svt import tuned_svt
-from .linear_ops import TraceLinearOp, vector
+from .ops import TraceLinearOp, vector
 from .decomposition import SVD
 
 

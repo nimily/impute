@@ -5,7 +5,7 @@ from typing import Any, List
 import numpy.linalg as npl
 
 from .base import SvtLagrangianImpute, Dataset
-from .linear_ops import EntryTraceLinearOp
+from .ops import EntryTraceLinearOp
 from .svt import tuned_svt
 
 DEFAULT_TOL = 1e-5
