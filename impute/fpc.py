@@ -5,23 +5,20 @@ from collections import namedtuple
 import numpy as np
 import numpy.linalg as npl
 
-from .base import vector, LagrangianImpute, Dataset
+from .base import vector, SvtLagrangianImpute, Dataset
 from .decomposition import SVD
-from .svt import tuned_svt
 
 DEFAULT_XTOL = 1e-3
 DEFAULT_GTOL = 0.0
 DEFAULT_DTOL = inf
 
-DEFAULT_SVT = tuned_svt()
-
-FpcMetrics = namedtuple('Metric', 'd_norm o_norm opt_cond')
+FpcMetrics = namedtuple('Metric', 'loss d_norm o_norm opt_cond')
 
 
-class FpcImpute(LagrangianImpute):
+class FpcImpute(SvtLagrangianImpute):
 
-    def __init__(self, shape: Tuple[int, int], svt_op=DEFAULT_SVT):
-        super().__init__(shape)
+    def __init__(self, shape: Tuple[int, int], svt_op=None):
+        super().__init__(shape, svt_op)
 
         self.tau: float = 0.0
 
@@ -29,11 +26,13 @@ class FpcImpute(LagrangianImpute):
         self.gtol: float = DEFAULT_GTOL
         self.dtol: float = DEFAULT_DTOL
 
-        self.svt_op = svt_op
+    def get_threshold(self, alpha: float):
+        return self.tau * alpha
 
     def update_once(self,
                     ds: Dataset,
-                    alpha: float) -> FpcMetrics:
+                    alpha: float,
+                    prev_rank: int = 0) -> FpcMetrics:
         tau = self.tau
 
         assert self.z_new is not None
@@ -42,7 +41,7 @@ class FpcImpute(LagrangianImpute):
 
         g_old = ds.rss_grad(m_old)
         y_new = m_old - tau * g_old
-        z_new = self.svt_op(y_new, tau * alpha)
+        z_new = self.svt(y_new, alpha, prev_rank)
         m_new = z_new.to_matrix()
 
         d_norm = npl.norm(m_new - m_old)
@@ -68,6 +67,7 @@ class FpcImpute(LagrangianImpute):
         self.z_new = z_new
 
         return FpcMetrics(
+            loss=ds.loss(z_new, alpha),
             d_norm=d_norm,
             o_norm=npl.norm(m_old),
             opt_cond=opt_cond
@@ -89,8 +89,11 @@ class FpcImpute(LagrangianImpute):
 
         return SVD(u, s, v)
 
-    def should_stop(self, metrics: Any) -> bool:
+    def should_stop(self, metrics: Any, goal: float) -> bool:
         assert isinstance(metrics, FpcMetrics)
+
+        if metrics.loss <= goal:
+            return True
 
         d_norm = metrics.d_norm
         o_norm = metrics.o_norm

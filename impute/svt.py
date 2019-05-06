@@ -2,8 +2,7 @@ from typing import Optional, Union, Callable
 
 import numpy as np
 
-from .base import SVD
-from .decomposition import exact_svd, randomized_svd
+from .decomposition import SVD, exact_svd, randomized_svd
 
 
 def soft_thresh(level):
@@ -17,7 +16,7 @@ def hard_thresh(level):
 def svt(
         w: np.ndarray,
         level: float,
-        rank: Optional[int] = None,
+        guess: Optional[int] = None,
         thresh: str = 'soft',
         svd: Union[Callable, str] = 'exact') -> SVD:
     if thresh == 'soft':
@@ -33,9 +32,11 @@ def svt(
         else:
             svd = exact_svd
 
-    assert callable(thresh)
-    u, s, v = svd(w, level, rank)
+    if guess is None:
+        guess = 5
+    u, s, v = svd(w, level, guess)
 
+    assert callable(thresh)
     return SVD(u, thresh(s), v).trim()
 
 
@@ -43,7 +44,7 @@ def tuned_svt(thresh: str = 'soft',
               svd: Union[Callable, str] = 'exact'):
     def _svt(w: np.ndarray,
              level: float,
-             rank: Optional[int] = None):
-        return svt(w, level, rank, thresh, svd)
+             guess: Optional[int] = None):
+        return svt(w, level, guess, thresh, svd)
 
     return _svt

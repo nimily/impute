@@ -7,6 +7,8 @@ from .base import BaseImpute
 from .base import LagrangianImpute
 from .base import penalized_loss
 
+from .decomposition import SVD
+
 from .linear_ops import DotLinearOp
 from .linear_ops import DenseTraceLinearOp
 from .linear_ops import RowTraceLinearOp

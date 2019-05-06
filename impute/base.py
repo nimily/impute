@@ -5,6 +5,7 @@ from typing import Optional, List, Tuple, Any, Union
 import numpy as np
 import numpy.linalg as npl
 
+from .svt import tuned_svt
 from .linear_ops import TraceLinearOp, vector
 from .decomposition import SVD
 
@@ -17,14 +18,44 @@ class Dataset:
     def __init__(self,
                  op: TraceLinearOp,
                  ys: Union[vector, List[float]],
-                 ay: Optional[vector] = None):
+                 xty: Optional[vector] = None,
+                 yty: Optional[float] = None):
         self.op: TraceLinearOp = op
         self.ys: vector = ys if isinstance(ys, np.ndarray) else np.array(ys)
-        self.ay: Optional[vector] = ay
+
+        self.xty: Optional[vector] = xty
+        self.yty: Optional[float] = yty
+
+        self.fresh = False
+
+    def loss(self, b: Union[SVD, vector], alpha: float):
+        rss = self.rss(b.to_matrix()) if isinstance(b, SVD) else self.rss(b)
+
+        reg = np.sum(b.s) if isinstance(b, SVD) else npl.norm(b, 'nuc')
+
+        return rss + alpha * reg
+
+    def rss(self, b: vector) -> float:
+        self.ensure_freshness()
+
+        assert self.yty is not None
+        assert self.xty is not None
+
+        return np.sum(b * (self.op.xtx(b) - 2 * self.xty)) + self.yty
 
     def rss_grad(self, b: vector) -> vector:
-        self.ay = self.op.t(self.ys)
-        return self.op.xtx(b) - self.ay
+        self.ensure_freshness()
+        return self.op.xtx(b) - self.xty
+
+    def ensure_freshness(self):
+        if not self.fresh:
+            self.refresh()
+
+    def refresh(self):
+        self.fresh = True
+
+        self.xty = self.op.t(self.ys)
+        self.yty = sum(np.power(self.ys, 2))
 
     @property
     def xs(self):
@@ -33,8 +64,10 @@ class Dataset:
     def extend(self, xs, ys):
         self.op.extend(xs)
 
-        if isinstance(self.ys, np.ndarray):
-            self.ys = np.concatenate([self.ys, ys])
+        assert isinstance(self.ys, np.ndarray)
+        self.ys = np.concatenate([self.ys, ys])
+
+        self.fresh = False
 
 
 def penalized_loss(ds: Dataset, b, alpha):
@@ -56,7 +89,7 @@ class BaseImpute:
         self._init_starting_point()
         self._init_z()
 
-    def _init_starting_point(self, value=None):
+    def _init_starting_point(self, value: np.ndarray = None):
 
         if value is None:
             sp = self.zero()
@@ -82,11 +115,12 @@ class LagrangianImpute(BaseImpute):
     @abc.abstractmethod
     def update_once(self,
                     ds: Dataset,
-                    alpha: float) -> Any:
+                    alpha: float,
+                    prev_rank: int = 0) -> Any:
         pass
 
     @abc.abstractmethod
-    def should_stop(self, metrics: Any) -> bool:
+    def should_stop(self, metrics: Any, goal: float) -> bool:
         pass
 
     def _prefit(self,
@@ -102,6 +136,7 @@ class LagrangianImpute(BaseImpute):
             alphas: List[float],
             max_iters: int = 100,
             warm_start: bool = True,
+            goal: float = 0,
             **kwargs) -> List[SVD]:
 
         self._prefit(ds, alphas, max_iters, warm_start, **kwargs)
@@ -111,11 +146,13 @@ class LagrangianImpute(BaseImpute):
 
         zs: List[SVD] = []
 
+        assert self.z_new is not None
         for alpha in alphas:
             for _ in range(max_iters):
-                metrics = self.update_once(ds, alpha)
+                prev_rank = self.z_new.rank
+                metrics = self.update_once(ds, alpha, prev_rank)
 
-                if self.should_stop(metrics):
+                if self.should_stop(metrics, goal):
                     break
 
             assert self.z_new is not None
@@ -154,3 +191,27 @@ class LagrangianImpute(BaseImpute):
         alphas.append(alpha_min)
 
         return alphas
+
+
+class SvtLagrangianImpute(LagrangianImpute):
+    DEFAULT_SVT = tuned_svt()
+
+    def __init__(self, shape: Tuple[int, int], svt_op=None):
+        super().__init__(shape)
+
+        if svt_op is None:
+            svt_op = SvtLagrangianImpute.DEFAULT_SVT
+
+        self.svt_op = svt_op
+
+    def svt(self,
+            w,
+            alpha: float,
+            prev_rank: int = 0) -> SVD:
+        thresh = self.get_threshold(alpha)
+        guess = prev_rank + 4
+        return self.svt_op(w, thresh, guess=guess)
+
+    @abc.abstractmethod
+    def get_threshold(self, alpha: float):
+        pass
