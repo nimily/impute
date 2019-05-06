@@ -127,4 +127,4 @@ def randomized_svd(
     if transpose:
         u, s, v = v.T, s, u.T
 
-    return SVD(u, s, v).trim(max_rank)
+    return SVD(u, s, v).trim(rank=max_rank)

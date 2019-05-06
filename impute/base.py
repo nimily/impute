@@ -31,7 +31,7 @@ class Dataset:
     def loss(self, b: Union[SVD, vector], alpha: float):
         rss = self.rss(b.to_matrix()) if isinstance(b, SVD) else self.rss(b)
 
-        reg = b.s.sum() if isinstance(b, SVD) else npl.norm(b, 'nuc')
+        reg = np.sum(b.s) if isinstance(b, SVD) else npl.norm(b, 'nuc')
 
         return rss + alpha * reg
 
@@ -41,7 +41,7 @@ class Dataset:
         assert self.yty is not None
         assert self.xty is not None
 
-        return sum(b * (self.op.xtx(b) - 2 * self.xty)) + self.yty
+        return np.sum(b * (self.op.xtx(b) - 2 * self.xty)) + self.yty
 
     def rss_grad(self, b: vector) -> vector:
         self.ensure_freshness()
@@ -55,7 +55,7 @@ class Dataset:
         self.fresh = True
 
         self.xty = self.op.t(self.ys)
-        self.yty = np.power(self.ys, 2).sum()
+        self.yty = sum(np.power(self.ys, 2))
 
     @property
     def xs(self):
@@ -209,7 +209,8 @@ class SvtLagrangianImpute(LagrangianImpute):
             alpha: float,
             prev_rank: int = 0) -> SVD:
         thresh = self.get_threshold(alpha)
-        return self.svt_op(w, thresh)
+        guess = prev_rank + 4
+        return self.svt_op(w, thresh, guess=guess)
 
     @abc.abstractmethod
     def get_threshold(self, alpha: float):

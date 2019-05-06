@@ -26,16 +26,16 @@ class SVD(NamedTuple):
     def to_matrix(self) -> np.ndarray:
         return self.u @ np.diag(self.s) @ self.v
 
-    def trim(self, r=None) -> 'SVD':
-        if r:
-            r = min(r, sum(self.s > 0))
+    def trim(self, thresh: float = 0, rank=None) -> 'SVD':
+        if rank:
+            rank = min(rank, sum(self.s > thresh))
         else:
-            r = sum(self.s > 0)
+            rank = sum(self.s > thresh)
 
-        r = max(r, 1)
+        rank = max(rank, 1)
 
-        u = self.u[:, :r]
-        s = self.s[:r]
-        v = self.v[:r, :]
+        u = self.u[:, :rank]
+        s = self.s[:rank]
+        v = self.v[:rank, :]
 
         return SVD(u, s, v)
