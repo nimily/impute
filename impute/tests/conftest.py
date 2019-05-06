@@ -187,7 +187,7 @@ def imputer_cls_fixture(request):
 @pytest.fixture(
     params=[
         'exact',
-        'randomized',
+        # 'randomized',
     ],
     name='svt'
 )

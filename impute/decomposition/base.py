@@ -32,7 +32,11 @@ class SVD(NamedTuple):
         else:
             rank = sum(self.s > thresh)
 
-        rank = max(rank, 1)
+        if rank == 0:
+            u = self.u[:, :1]
+            s = np.zeros(1)
+            v = self.v[:1, :]
+            return SVD(u, s, v)
 
         u = self.u[:, :rank]
         s = self.s[:rank]

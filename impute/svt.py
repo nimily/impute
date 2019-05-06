@@ -32,6 +32,8 @@ def svt(
         else:
             svd = exact_svd
 
+    if guess is None:
+        guess = 5
     u, s, v = svd(w, level, guess)
 
     assert callable(thresh)
