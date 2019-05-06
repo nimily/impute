@@ -2,8 +2,7 @@ from typing import Optional, Union, Callable
 
 import numpy as np
 
-from .base import SVD
-from .decomposition import exact_svd, randomized_svd
+from .decomposition import SVD, exact_svd, randomized_svd
 
 
 def soft_thresh(level):

@@ -10,6 +10,10 @@ class SVD(NamedTuple):
     v: np.ndarray
 
     @property
+    def rank(self):
+        return sum(self.s > 1e-7)
+
+    @property
     def t(self):
         return SVD(self.v.T, self.s, self.u.T)
 

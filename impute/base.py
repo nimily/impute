@@ -5,6 +5,7 @@ from typing import Optional, List, Tuple, Any, Union
 import numpy as np
 import numpy.linalg as npl
 
+from .svt import tuned_svt
 from .linear_ops import TraceLinearOp, vector
 from .decomposition import SVD
 
@@ -56,7 +57,7 @@ class BaseImpute:
         self._init_starting_point()
         self._init_z()
 
-    def _init_starting_point(self, value=None):
+    def _init_starting_point(self, value: np.ndarray = None):
 
         if value is None:
             sp = self.zero()
@@ -82,7 +83,8 @@ class LagrangianImpute(BaseImpute):
     @abc.abstractmethod
     def update_once(self,
                     ds: Dataset,
-                    alpha: float) -> Any:
+                    alpha: float,
+                    prev_rank: int = 0) -> Any:
         pass
 
     @abc.abstractmethod
@@ -111,9 +113,11 @@ class LagrangianImpute(BaseImpute):
 
         zs: List[SVD] = []
 
+        assert self.z_old is not None
         for alpha in alphas:
             for _ in range(max_iters):
-                metrics = self.update_once(ds, alpha)
+                prev_rank = self.z_old.rank
+                metrics = self.update_once(ds, alpha, prev_rank)
 
                 if self.should_stop(metrics):
                     break
@@ -154,3 +158,26 @@ class LagrangianImpute(BaseImpute):
         alphas.append(alpha_min)
 
         return alphas
+
+
+class SvtLagrangianImpute(LagrangianImpute):
+    DEFAULT_SVT = tuned_svt()
+
+    def __init__(self, shape: Tuple[int, int], svt_op=None):
+        super().__init__(shape)
+
+        if svt_op is None:
+            svt_op = SvtLagrangianImpute.DEFAULT_SVT
+
+        self.svt_op = svt_op
+
+    def svt(self,
+            w,
+            alpha: float,
+            prev_rank: int = 0) -> SVD:
+        thresh = self.get_threshold(alpha)
+        return self.svt_op(w, thresh)
+
+    @abc.abstractmethod
+    def get_threshold(self, alpha: float):
+        pass

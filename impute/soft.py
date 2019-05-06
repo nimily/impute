@@ -2,32 +2,35 @@ from typing import Tuple, Any, List
 
 import numpy.linalg as npl
 
-from .base import LagrangianImpute, Dataset
+from .base import SvtLagrangianImpute, Dataset
 from .linear_ops import EntryTraceLinearOp
-from .decomposition import SVD
 from .svt import tuned_svt
 
 DEFAULT_TOL = 1e-5
 DEFAULT_SVT = tuned_svt()
 
 
-class SoftImpute(LagrangianImpute):
+class SoftImpute(SvtLagrangianImpute):
 
-    def __init__(self, shape, svt_op=DEFAULT_SVT):
-        super().__init__(shape)
+    def __init__(self, shape, svt_op=None):
+        super().__init__(shape, svt_op)
 
         self.tol = 0
-        self.svt_op = svt_op
 
-    def update_once(self, ds: Dataset, alpha: float) -> Tuple[float, float]:
+    def get_threshold(self, alpha: float):
+        return alpha
+
+    def update_once(self,
+                    ds: Dataset,
+                    alpha: float,
+                    prev_rank: int = 0) -> Tuple[float, float]:
         self.ensure_entry_op(ds)
 
-        assert self.z_new is not None
-        z_old = self.z_new
+        z_old = self.z_new  # type: ignore
         m_old = z_old.to_matrix()
 
         y_new = m_old - ds.rss_grad(m_old)
-        z_new = self.svt(y_new, alpha)
+        z_new = self.svt(y_new, alpha, prev_rank)
         m_new = z_new.to_matrix()
 
         self.z_old = z_old
@@ -55,9 +58,6 @@ class SoftImpute(LagrangianImpute):
             self.tol = kwargs['tol']
         else:
             self.tol = DEFAULT_TOL
-
-    def svt(self, w, alpha: float) -> SVD:
-        return self.svt_op(w, alpha)
 
     @staticmethod
     def ensure_entry_op(ds: Dataset):
