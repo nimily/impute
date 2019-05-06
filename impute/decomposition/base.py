@@ -30,8 +30,8 @@ class SVD(NamedTuple):
     def to_matrix(self) -> np.ndarray:
         return self.u @ np.diag(self.s) @ self.v
 
-    def trim(self, thresh: float = 0, rank=None) -> 'SVD':
-        if rank:
+    def trim(self, thresh: float = 0, rank: int = 0) -> 'SVD':
+        if rank > 0:
             rank = min(rank, sum(self.s > thresh))
         else:
             rank = sum(self.s > thresh)
