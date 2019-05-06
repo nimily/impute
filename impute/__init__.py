@@ -1,19 +1,18 @@
 from .version import version as __version__
 
-from .linear_ops import vector
+from .ops import vector
 
 from .base import Dataset
 from .base import BaseImpute
 from .base import LagrangianImpute
-from .base import penalized_loss
 
 from .decomposition import SVD
 
-from .linear_ops import DotLinearOp
-from .linear_ops import DenseTraceLinearOp
-from .linear_ops import RowTraceLinearOp
-from .linear_ops import EntryTraceLinearOp
-from .linear_ops import TraceLinearOp
+from .ops import DotLinearOp
+from .ops import DenseTraceLinearOp
+from .ops import RowTraceLinearOp
+from .ops import EntryTraceLinearOp
+from .ops import TraceLinearOp
 
 from .fpc import FpcImpute
 from .soft import SoftImpute

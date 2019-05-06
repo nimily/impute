@@ -6,7 +6,7 @@ import numpy as np
 import numpy.linalg as npl
 
 from .svt import tuned_svt
-from .linear_ops import TraceLinearOp, vector
+from .ops import TraceLinearOp, vector
 from .decomposition import SVD
 
 
@@ -28,12 +28,25 @@ class Dataset:
 
         self.fresh = False
 
-    def loss(self, b: Union[SVD, vector], alpha: float):
-        rss = self.rss(b.to_matrix()) if isinstance(b, SVD) else self.rss(b)
+    def loss(self,
+             b: Union[SVD, vector],
+             alphas: Union[float, List[float], np.ndarray]) -> np.ndarray:
+        if isinstance(alphas, float):
+            alphas = [alphas]
 
-        reg = np.sum(b.s) if isinstance(b, SVD) else npl.norm(b, 'nuc')
+        alphas = np.array(alphas)
 
-        return rss + alpha * reg
+        if isinstance(b, SVD):
+            matrix = b.to_matrix()
+            nuc_norm = np.sum(b.s)
+        else:
+            matrix = b
+            nuc_norm = npl.norm(b, 'nuc')
+
+        rss = self.rss(matrix)
+        reg = nuc_norm
+
+        return rss + alphas * reg
 
     def rss(self, b: vector) -> float:
         self.ensure_freshness()
@@ -68,12 +81,6 @@ class Dataset:
         self.ys = np.concatenate([self.ys, ys])
 
         self.fresh = False
-
-
-def penalized_loss(ds: Dataset, b, alpha):
-    ys = np.array(ds.ys)
-    yh = ds.op(b)
-    return np.sum((ys - yh) ** 2) / 2 + alpha * npl.norm(b, 'nuc')
 
 
 class BaseImpute:
@@ -136,7 +143,7 @@ class LagrangianImpute(BaseImpute):
             alphas: List[float],
             max_iters: int = 100,
             warm_start: bool = True,
-            goal: float = 0,
+            goals: Optional[Union[List[float], np.ndarray]] = None,
             **kwargs) -> List[SVD]:
 
         self._prefit(ds, alphas, max_iters, warm_start, **kwargs)
@@ -146,8 +153,11 @@ class LagrangianImpute(BaseImpute):
 
         zs: List[SVD] = []
 
+        if goals is None:
+            goals = np.zeros_like(alphas)
+
         assert self.z_new is not None
-        for alpha in alphas:
+        for alpha, goal in zip(alphas, goals):
             for _ in range(max_iters):
                 prev_rank = self.z_new.rank
                 metrics = self.update_once(ds, alpha, prev_rank)
