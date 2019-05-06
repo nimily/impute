@@ -28,12 +28,25 @@ class Dataset:
 
         self.fresh = False
 
-    def loss(self, b: Union[SVD, vector], alpha: float):
-        rss = self.rss(b.to_matrix()) if isinstance(b, SVD) else self.rss(b)
+    def loss(self,
+             b: Union[SVD, vector],
+             alphas: Union[float, List[float], np.ndarray]) -> np.ndarray:
+        if isinstance(alphas, float):
+            alphas = [alphas]
 
-        reg = np.sum(b.s) if isinstance(b, SVD) else npl.norm(b, 'nuc')
+        alphas = np.array(alphas)
 
-        return rss + alpha * reg
+        if isinstance(b, SVD):
+            matrix = b.to_matrix()
+            nuc_norm = np.sum(b.s)
+        else:
+            matrix = b
+            nuc_norm = npl.norm(b, 'nuc')
+
+        rss = self.rss(matrix)
+        reg = nuc_norm
+
+        return rss + alphas * reg
 
     def rss(self, b: vector) -> float:
         self.ensure_freshness()
