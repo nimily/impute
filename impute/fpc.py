@@ -12,7 +12,7 @@ DEFAULT_XTOL = 1e-3
 DEFAULT_GTOL = 0.0
 DEFAULT_DTOL = inf
 
-FpcMetrics = namedtuple('Metric', 'd_norm o_norm opt_cond')
+FpcMetrics = namedtuple('Metric', 'loss d_norm o_norm opt_cond')
 
 
 class FpcImpute(SvtLagrangianImpute):
@@ -35,7 +35,8 @@ class FpcImpute(SvtLagrangianImpute):
                     prev_rank: int = 0) -> FpcMetrics:
         tau = self.tau
 
-        z_old = self.z_new  # type: ignore
+        assert self.z_new is not None
+        z_old = self.z_new
         m_old = z_old.to_matrix()
 
         g_old = ds.rss_grad(m_old)
@@ -65,7 +66,10 @@ class FpcImpute(SvtLagrangianImpute):
         self.z_old = z_old
         self.z_new = z_new
 
+        loss = ds.loss(m_new, alpha)
+
         return FpcMetrics(
+            loss=loss,
             d_norm=d_norm,
             o_norm=npl.norm(m_old),
             opt_cond=opt_cond
@@ -87,8 +91,11 @@ class FpcImpute(SvtLagrangianImpute):
 
         return SVD(u, s, v)
 
-    def should_stop(self, metrics: Any) -> bool:
+    def should_stop(self, metrics: Any, goal: float) -> bool:
         assert isinstance(metrics, FpcMetrics)
+
+        if metrics.loss <= goal:
+            return True
 
         d_norm = metrics.d_norm
         o_norm = metrics.o_norm

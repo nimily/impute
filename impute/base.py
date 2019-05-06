@@ -8,34 +8,70 @@ import numpy.linalg as npl
 from .svt import tuned_svt
 from .linear_ops import TraceLinearOp, vector
 from .decomposition import SVD
+from .utils import trace_inner as inner
+from .vector import Vector, Matrix, FullMatrix, RowMatrix, EntryMatrix
+
+vector_repr = Union[vector, SVD]
 
 
 class Dataset:
-    op: TraceLinearOp
-    ys: Union[vector, List[float]]
-    aty: Optional[vector] = None
 
     def __init__(self,
                  op: TraceLinearOp,
                  ys: Union[vector, List[float]],
-                 ay: Optional[vector] = None):
+                 xty: Optional[vector] = None,
+                 yty: Optional[float] = None):
+
         self.op: TraceLinearOp = op
         self.ys: vector = ys if isinstance(ys, np.ndarray) else np.array(ys)
-        self.ay: Optional[vector] = ay
+        self.xty: Optional[vector] = xty
+        self.yty: Optional[float] = yty
+
+        self.fresh = False
+
+    @staticmethod
+    def nuc_norm(b: vector_repr) -> float:
+        if isinstance(b, np.ndarray):
+            return npl.norm(b, 'nuc')
+        else:
+            return b.s.sum()
+
+    def loss(self, b, alpha: float):
+        return self.rss(b) + alpha * Dataset.nuc_norm(b)
+
+    def rss(self, b: vector) -> float:
+        self.ensure_refreshness()
+
+        assert isinstance(self.xty, np.ndarray)
+        assert isinstance(self.yty, float)
+
+        return (inner(b, self.op.xtx(b) - 2 * self.xty) + self.yty) / 2
 
     def rss_grad(self, b: vector) -> vector:
-        self.ay = self.op.t(self.ys)
-        return self.op.xtx(b) - self.ay
+        self.ensure_refreshness()
+        return self.op.xtx(b) - self.xty
 
     @property
     def xs(self):
         return self.op.to_matrix_list()
 
+    def ensure_refreshness(self):
+        if not self.fresh:
+            self.refresh()
+
+    def refresh(self):
+        self.fresh = True
+
+        self.xty = self.op.t(self.ys)
+        self.yty = (self.ys ** 2).sum()
+
     def extend(self, xs, ys):
         self.op.extend(xs)
 
-        if isinstance(self.ys, np.ndarray):
-            self.ys = np.concatenate([self.ys, ys])
+        assert isinstance(self.ys, np.ndarray)
+        self.ys = np.concatenate([self.ys, ys])
+
+        self.fresh = False
 
 
 def penalized_loss(ds: Dataset, b, alpha):
@@ -88,7 +124,7 @@ class LagrangianImpute(BaseImpute):
         pass
 
     @abc.abstractmethod
-    def should_stop(self, metrics: Any) -> bool:
+    def should_stop(self, metrics: Any, goal: float) -> bool:
         pass
 
     def _prefit(self,
@@ -104,6 +140,7 @@ class LagrangianImpute(BaseImpute):
             alphas: List[float],
             max_iters: int = 100,
             warm_start: bool = True,
+            goal: float = 0,
             **kwargs) -> List[SVD]:
 
         self._prefit(ds, alphas, max_iters, warm_start, **kwargs)
@@ -113,13 +150,13 @@ class LagrangianImpute(BaseImpute):
 
         zs: List[SVD] = []
 
-        assert self.z_old is not None
+        assert self.z_new is not None
         for alpha in alphas:
             for _ in range(max_iters):
-                prev_rank = self.z_old.rank
+                prev_rank = self.z_new.rank
                 metrics = self.update_once(ds, alpha, prev_rank)
 
-                if self.should_stop(metrics):
+                if self.should_stop(metrics, goal):
                     break
 
             assert self.z_new is not None

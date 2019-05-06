@@ -23,3 +23,7 @@ def random_one_hot(shape) -> Tuple[Tuple[int, ...], float, np.ndarray]:
     assert isinstance(val, float)
 
     return pos, val, one_hot(shape, pos, val)
+
+
+def trace_inner(a: np.ndarray, b: np.ndarray) -> float:
+    return (a * b).sum()

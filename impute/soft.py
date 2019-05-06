@@ -26,7 +26,8 @@ class SoftImpute(SvtLagrangianImpute):
                     prev_rank: int = 0) -> Tuple[float, float]:
         self.ensure_entry_op(ds)
 
-        z_old = self.z_new  # type: ignore
+        assert self.z_new is not None
+        z_old = self.z_new
         m_old = z_old.to_matrix()
 
         y_new = m_old - ds.rss_grad(m_old)
@@ -38,7 +39,7 @@ class SoftImpute(SvtLagrangianImpute):
 
         return npl.norm(m_new - m_old), npl.norm(m_old)
 
-    def should_stop(self, metrics: Any) -> bool:
+    def should_stop(self, metrics: Any, goal: float) -> bool:
         delta_norm, old_norm = metrics
 
         return delta_norm ** 2 < self.tol * old_norm ** 2
