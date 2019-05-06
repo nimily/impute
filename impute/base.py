@@ -143,7 +143,7 @@ class LagrangianImpute(BaseImpute):
             alphas: List[float],
             max_iters: int = 100,
             warm_start: bool = True,
-            goal: float = 0,
+            goals: Optional[Union[List[float], np.ndarray]] = None,
             **kwargs) -> List[SVD]:
 
         self._prefit(ds, alphas, max_iters, warm_start, **kwargs)
@@ -153,8 +153,11 @@ class LagrangianImpute(BaseImpute):
 
         zs: List[SVD] = []
 
+        if goals is None:
+            goals = np.zeros_like(alphas)
+
         assert self.z_new is not None
-        for alpha in alphas:
+        for alpha, goal in zip(alphas, goals):
             for _ in range(max_iters):
                 prev_rank = self.z_new.rank
                 metrics = self.update_once(ds, alpha, prev_rank)
