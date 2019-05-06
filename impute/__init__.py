@@ -5,7 +5,6 @@ from .linear_ops import vector
 from .base import Dataset
 from .base import BaseImpute
 from .base import LagrangianImpute
-from .base import penalized_loss
 
 from .decomposition import SVD
 

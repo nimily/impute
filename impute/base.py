@@ -70,12 +70,6 @@ class Dataset:
         self.fresh = False
 
 
-def penalized_loss(ds: Dataset, b, alpha):
-    ys = np.array(ds.ys)
-    yh = ds.op(b)
-    return np.sum((ys - yh) ** 2) / 2 + alpha * npl.norm(b, 'nuc')
-
-
 class BaseImpute:
 
     def __init__(self, shape: Tuple[int, int]):

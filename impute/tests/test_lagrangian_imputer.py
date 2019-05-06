@@ -4,7 +4,6 @@ import numpy.testing as npt
 
 import pytest
 
-from impute import penalized_loss as loss
 from impute.svt import tuned_svt
 
 
@@ -76,7 +75,7 @@ class TestLagrangianImputer:
         z = imputer.impute(ds, alpha=alpha, gtol=1e-3)
         m = z.to_matrix()
 
-        loss_b = loss(ds, b, alpha) + 1e-5
-        loss_m = loss(ds, m, alpha)
+        loss_b = ds.loss(b, alpha) + 1e-5
+        loss_m = ds.loss(m, alpha)
 
         assert loss_m < loss_b
