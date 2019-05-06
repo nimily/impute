@@ -1,4 +1,6 @@
-from typing import Tuple, Any, List
+from collections import namedtuple
+
+from typing import Any, List
 
 import numpy.linalg as npl
 
@@ -8,6 +10,8 @@ from .svt import tuned_svt
 
 DEFAULT_TOL = 1e-5
 DEFAULT_SVT = tuned_svt()
+
+SoftMetrics = namedtuple('Metric', 'loss d_norm o_norm')
 
 
 class SoftImpute(SvtLagrangianImpute):
@@ -23,10 +27,11 @@ class SoftImpute(SvtLagrangianImpute):
     def update_once(self,
                     ds: Dataset,
                     alpha: float,
-                    prev_rank: int = 0) -> Tuple[float, float]:
+                    prev_rank: int = 0) -> SoftMetrics:
         self.ensure_entry_op(ds)
 
-        z_old = self.z_new  # type: ignore
+        assert self.z_new is not None
+        z_old = self.z_new
         m_old = z_old.to_matrix()
 
         y_new = m_old - ds.rss_grad(m_old)
@@ -36,10 +41,19 @@ class SoftImpute(SvtLagrangianImpute):
         self.z_old = z_old
         self.z_new = z_new
 
-        return npl.norm(m_new - m_old), npl.norm(m_old)
+        return SoftMetrics(
+            loss=ds.loss(z_new, alpha),
+            d_norm=npl.norm(m_new - m_old),
+            o_norm=npl.norm(m_old)
+        )
 
-    def should_stop(self, metrics: Any) -> bool:
-        delta_norm, old_norm = metrics
+    def should_stop(self, metrics: Any, goal: float) -> bool:
+        assert isinstance(metrics, SoftMetrics)
+
+        loss, delta_norm, old_norm = metrics
+
+        if loss <= goal:
+            return True
 
         return delta_norm ** 2 < self.tol * old_norm ** 2
 
