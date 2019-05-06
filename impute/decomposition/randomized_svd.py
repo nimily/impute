@@ -1,11 +1,94 @@
-from typing import Optional
+from typing import Optional, Tuple
 
 import numpy as np
+import numpy.random as npr
 
-from numpy.linalg import svd
-from sklearn.decomposition import TruncatedSVD
+from numpy.linalg import eigh
+from scipy.linalg import qr, polar
+
+from sklearn.utils.extmath import svd_flip
 
 from .base import SVD
+
+
+def sym_eig(x):
+    d, v = eigh(x)
+
+    d = np.flip(d)
+    v = np.flip(v, axis=1)
+
+    return v, d
+
+
+def partial_orthogonalization(
+        y: np.ndarray,
+        q: np.ndarray,
+        overwrite_y: bool = False) -> np.ndarray:
+    if not overwrite_y:
+        y = y.copy()
+
+    y -= q @ (q.T @ y)
+
+    y = qr(y, mode='economic')[0]
+
+    return y
+
+
+def randomized_expander(
+        z: np.ndarray,
+        q: np.ndarray,
+        n_col: int = 10,
+        n_iter: int = 2) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    # step A
+    m = z.shape[1]
+    p = min(n_col, m - q.shape[1])
+
+    w = npr.randn(m, p)
+    y = z @ w
+    del w
+
+    qy = partial_orthogonalization(y, q, overwrite_y=True)
+    q = np.append(q, qy, axis=1)
+
+    for _ in range(n_iter):
+        q = z @ (z.T @ q)
+        q = qr(q, mode='economic')[0]
+
+    # step B
+    h, c = qr(z.T @ q, mode='economic')
+    w, p = polar(c)
+    v, d = sym_eig(p)
+
+    return q @ v, d, (h @ w @ v).T
+
+
+def _fixed_rank_svd(
+        z: np.ndarray,
+        rank: int = 5,
+        n_oversamples: int = 10,
+        n_iter='auto') -> SVD:
+    m, n = z.shape
+
+    transpose = m < n
+
+    if transpose:
+        z = z.T
+        m, n = n, m
+
+    if n_iter == 'auto':
+        n_iter = 7 if rank < .1 * n else 4
+
+    u = np.zeros((m, 0), dtype=np.float64)
+
+    n_col = rank + n_oversamples
+    u, s, v = randomized_expander(z, u, n_col, n_iter)
+
+    u, v = svd_flip(u, v)
+
+    if transpose:
+        u, s, v = v.T, s, u.T
+
+    return SVD(u, s, v).trim(rank=rank)
 
 
 def randomized_svd(
@@ -21,11 +104,7 @@ def randomized_svd(
     stop = False
     rank = guess
     while not stop:
-        trunc_svd = TruncatedSVD(n_components=rank, n_iter=20)
-        trunc_svd.fit(z)
-
-        v = np.array(trunc_svd.components_)
-        u, s, _ = svd(z @ v.T)
+        u, s, v = _fixed_rank_svd(z, rank, n_oversamples=10, n_iter=7)
 
         if s[-1] < tol or rank == max_rank:
             stop = True

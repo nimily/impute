@@ -10,6 +10,10 @@ class SVD(NamedTuple):
     v: np.ndarray
 
     @property
+    def shape(self):
+        return self.u.shape[0], self.v.shape[1]
+
+    @property
     def rank(self):
         return sum(self.s > 1e-7)
 
@@ -33,9 +37,11 @@ class SVD(NamedTuple):
             rank = sum(self.s > thresh)
 
         if rank == 0:
+
             u = self.u[:, :1]
             s = np.zeros(1)
             v = self.v[:1, :]
+
             return SVD(u, s, v)
 
         u = self.u[:, :rank]
